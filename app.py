@@ -68,7 +68,7 @@ def calcular_distancia(origem, destino):
             return data['rows'][0]['elements'][0]['distance']['value'] / 1000
         else:
             logger.warning(f"Erro na Distance Matrix API: {data.get('error_message', 'Erro desconhecido')}")
-            flash(f'Erro ao calcular distância: {data.get('error_message', 'Erro desconhecido')}')
+            flash(f"Erro ao calcular distância: {data.get('error_message', 'Erro desconhecido')}")
             return None
     except requests.exceptions.RequestException as e:
         logger.error(f"Erro de conexão com a Distance Matrix API: {str(e)}")
