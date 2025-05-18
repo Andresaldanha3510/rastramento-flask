@@ -1,4 +1,3 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from datetime import datetime, timedelta
@@ -6,6 +5,7 @@ import requests
 import logging
 import os
 import math
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///transport.db'
@@ -139,9 +139,22 @@ def index():
     motoristas = Motorista.query.all()
     veiculos = Veiculo.query.all()
     viagens = Viagem.query.all()
+
     # Verificar se há alguma viagem em andamento
     tem_viagem_em_andamento = any(viagem.status == 'em_andamento' for viagem in viagens)
-    return render_template('index.html', motoristas=motoristas, veiculos=veiculos, viagens=viagens, tem_viagem_em_andamento=tem_viagem_em_andamento)
+
+    # Filtrar viagens com status pendente ou em_andamento para mostrar na dashboard
+    viagens_ativas = Viagem.query.filter(Viagem.status.in_(['pendente', 'em_andamento'])).order_by(Viagem.data_inicio.desc()).all()
+
+    return render_template(
+        'index.html',
+        motoristas=motoristas,
+        veiculos=veiculos,
+        viagens=viagens,
+        tem_viagem_em_andamento=tem_viagem_em_andamento,
+        viagens_ativas=viagens_ativas
+    )
+
 
 @app.route('/cadastrar_motorista', methods=['GET', 'POST'])
 def cadastrar_motorista():
