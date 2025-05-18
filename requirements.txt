@@ -1,4 +1,5 @@
 Flask
 Flask_SQLAlchemy
+Flask_migrate
 requests
 gunicorn
