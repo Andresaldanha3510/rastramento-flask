@@ -1,173 +1,272 @@
-<script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
-
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
-
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
-
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
-            }
-        }
-        return gk_fileData[filename] || "";
-        }
-        </script><!DOCTYPE html>
-<html lang="pt-br">
+<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Viagem</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <script src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=places&callback=initMap" async defer></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        select, input[type="text"], input[type="datetime-local"], input[type="number"], textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .buttons {
+            text-align: center;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .submit-btn {
+            background-color: #28a745;
+            color: white;
+        }
+        .back-btn {
+            background-color: #6c757d;
+            color: white;
+        }
+        .edit-btn {
+            background-color: #007bff;
+            color: white;
+        }
+        .delete-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+        .messages {
+            margin-bottom: 20px;
+        }
+        .message {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .message.warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .accordion {
+            margin-top: 20px;
+        }
+        .accordion-item {
+            border: 1px solid #ccc;
+            margin-bottom: 5px;
+            border-radius: 4px;
+        }
+        .accordion-header {
+            background-color: #f1f1f1;
+            padding: 10px;
+            cursor: pointer;
+        }
+        .accordion-content {
+            display: none;
+            padding: 10px;
+        }
+        .accordion-content.active {
+            display: block;
+        }
+    </style>
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=places"></script>
     <script>
-        function initMap() {
-            if (!window.google || !window.google.maps) {
-                console.error("Google Maps JavaScript API failed to load.");
-                return;
-            }
-            if (!window.google.maps.places) {
-                console.error("Places API failed to load. Ensure the 'places' library is included in the API script URL.");
-                return;
-            }
+        function initAutocomplete() {
+            const enderecoSaida = document.getElementById('endereco_saida');
+            const enderecoDestino = document.getElementById('endereco_destino');
+            new google.maps.places.Autocomplete(enderecoSaida, { types: ['geocode'] });
+            new google.maps.places.Autocomplete(enderecoDestino, { types: ['geocode'] });
+        }
 
-            const form = document.querySelector('form');
-            if (!form) {
-                console.error("Form element not found in the DOM.");
-                return;
-            }
+        function toggleAccordion(id) {
+            const content = document.getElementById('accordion-content-' + id);
+            content.classList.toggle('active');
+        }
 
-            const enderecoSaidaInput = document.getElementById('endereco_saida');
-            const enderecoDestinoInput = document.getElementById('endereco_destino');
-            if (!enderecoSaidaInput || !enderecoDestinoInput) {
-                console.error("Input elements for endereco_saida or endereco_destino not found.");
-                return;
-            }
+        function preencherFormulario(element) {
+            const viagem = JSON.parse(element.getAttribute('data-viagem'));
+            document.getElementById('motorista_id').value = viagem.motorista_id;
+            document.getElementById('veiculo_id').value = viagem.veiculo_id;
+            document.getElementById('cliente').value = viagem.cliente;
+            document.getElementById('endereco_saida').value = viagem.endereco_saida;
+            document.getElementById('endereco_destino').value = viagem.endereco_destino;
+            const dataInicio = new Date(viagem.data_inicio);
+            const formattedDate = dataInicio.toISOString().slice(0, 16);
+            document.getElementById('data_inicio').value = formattedDate;
+            document.getElementById('custo').value = viagem.custo || '';
+            document.getElementById('forma_pagamento').value = viagem.forma_pagamento || '';
+            document.getElementById('status').value = viagem.status;
+            document.getElementById('observacoes').value = viagem.observacoes || '';
+            document.getElementById('form-action').action = '/editar_viagem/' + viagem.id;
+            document.getElementById('submit-btn').textContent = 'Salvar Alterações';
+        }
 
-            let enderecoSaidaValido = false;
-            let enderecoDestinoValido = false;
-
-            try {
-                // Configurar Autocomplete para Endereço de Saída
-                const autocompleteSaida = new google.maps.places.Autocomplete(enderecoSaidaInput, {
-                    fields: ['formatted_address', 'geometry'],
-                    types: ['geocode'],
-                    componentRestrictions: { country: 'br' }
-                });
-                console.log("Autocomplete for endereco_saida initialized successfully.");
-
-                // Configurar Autocomplete para Endereço de Destino
-                const autocompleteDestino = new google.maps.places.Autocomplete(enderecoDestinoInput, {
-                    fields: ['formatted_address', 'geometry'],
-                    types: ['geocode'],
-                    componentRestrictions: { country: 'br' }
-                });
-                console.log("Autocomplete for endereco_destino initialized successfully.");
-
-                // Quando um endereço é selecionado, marcar como válido e atualizar o valor
-                autocompleteSaida.addListener('place_changed', function() {
-                    const place = autocompleteSaida.getPlace();
-                    if (place && place.formatted_address) {
-                        enderecoSaidaValido = true;
-                        enderecoSaidaInput.value = place.formatted_address;
-                        console.log("Selected address for endereco_saida: ", place.formatted_address);
-                    } else {
-                        enderecoSaidaValido = false;
-                        console.log("No valid address selected for endereco_saida.");
-                    }
-                });
-
-                autocompleteDestino.addListener('place_changed', function() {
-                    const place = autocompleteDestino.getPlace();
-                    if (place && place.formatted_address) {
-                        enderecoDestinoValido = true;
-                        enderecoDestinoInput.value = place.formatted_address;
-                        console.log("Selected address for endereco_destino: ", place.formatted_address);
-                    } else {
-                        enderecoDestinoValido = false;
-                        console.log("No valid address selected for endereco_destino.");
-                    }
-                });
-
-                // Impedir envio com endereços inválidos
-                form.addEventListener('submit', function(event) {
-                    if (!enderecoSaidaValido || !enderecoDestinoValido) {
-                        event.preventDefault();
-                        alert('Por favor, selecione endereços válidos das sugestões fornecidas.');
-                    }
-                });
-            } catch (error) {
-                console.error("Error initializing Autocomplete: ", error);
+        function confirmarExclusao(viagemId) {
+            if (confirm('Tem certeza que deseja excluir esta viagem?')) {
+                window.location.href = '/excluir_viagem/' + viagemId;
             }
         }
+
+        window.onload = initAutocomplete;
     </script>
 </head>
-<body class="bg-gray-100">
-    <div class="container mx-auto p-4">
-        <h1 class="text-2xl font-bold mb-4">Iniciar Viagem</h1>
-        
-        {% with messages = get_flashed_messages() %}
+<body>
+    <div class="container">
+        <h1>Iniciar Viagem</h1>
+
+        <!-- Exibição de mensagens flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-                    {% for message in messages %}
-                        <p>{{ message }}</p>
+                <div class="messages">
+                    {% for category, message in messages %}
+                        <div class="message {{ category }}">{{ message }}</div>
                     {% endfor %}
                 </div>
             {% endif %}
         {% endwith %}
 
-        <form method="POST" class="bg-white p-6 rounded shadow-md">
-            <div class="mb-4">
-                <label class="block text-gray-700">Motorista</label>
-                <select name="motorista_id" required class="w-full p-2 border rounded">
+        <!-- Formulário de cadastro de viagem -->
+        <form id="form-action" method="POST" action="{{ url_for('iniciar_viagem') }}">
+            <div class="form-group">
+                <label for="motorista_id">Motorista</label>
+                <select id="motorista_id" name="motorista_id" required>
+                    <option value="" disabled {% if not viagem_edit %}selected{% endif %}>Selecione um motorista</option>
                     {% for motorista in motoristas %}
-                    <option value="{{ motorista.id }}">{{ motorista.nome }}</option>
+                        <option value="{{ motorista.id }}" {% if viagem_edit and viagem_edit.motorista_id == motorista.id %}selected{% endif %}>{{ motorista.nome }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="mb-4">
-                <label class="block text-gray-700">Veículo</label>
-                <select name="veiculo_id" required class="w-full p-2 border rounded">
+
+            <div class="form-group">
+                <label for="veiculo_id">Veículo</label>
+                <select id="veiculo_id" name="veiculo_id" required>
+                    <option value="" disabled {% if not viagem_edit %}selected{% endif %}>Selecione um veículo</option>
                     {% for veiculo in veiculos %}
-                    <option value="{{ veiculo.id }}">{{ veiculo.placa }} - {{ veiculo.modelo }}</option>
+                        <option value="{{ veiculo.id }}" {% if viagem_edit and viagem_edit.veiculo_id == veiculo.id %}selected{% endif %}>{{ veiculo.placa }} - {{ veiculo.modelo }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="mb-4">
-                <label class="block text-gray-700">Endereço de Saída</label>
-                <input type="text" name="endereco_saida" required class="w-full p-2 border rounded" id="endereco_saida">
+
+            <div class="form-group">
+                <label for="cliente">Nome do Cliente</label>
+                <input type="text" id="cliente" name="cliente" placeholder="Digite o nome do cliente" value="{{ viagem_edit.cliente if viagem_edit else '' }}" required>
             </div>
-            <div class="mb-4">
-                <label class="block text-gray-700">Endereço de Destino</label>
-                <input type="text" name="endereco_destino" required class="w-full p-2 border rounded" id="endereco_destino">
+
+            <div class="form-group">
+                <label for="endereco_saida">Endereço de Saída</label>
+                <input type="text" id="endereco_saida" name="endereco_saida" placeholder="Digite o endereço de saída" value="{{ viagem_edit.endereco_saida if viagem_edit else '' }}" required>
             </div>
-            <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Iniciar Viagem</button>
-            <a href="{{ url_for('index') }}" class="bg-gray-500 text-white px-4 py-2 rounded ml-2">Voltar</a>
+
+            <div class="form-group">
+                <label for="endereco_destino">Endereço de Destino</label>
+                <input type="text" id="endereco_destino" name="endereco_destino" placeholder="Digite o endereço de destino" value="{{ viagem_edit.endereco_destino if viagem_edit else '' }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="data_inicio">Data e Hora da Viagem</label>
+                <input type="datetime-local" id="data_inicio" name="data_inicio" value="{{ viagem_edit.data_inicio.strftime('%Y-%m-%dT%H:%M') if viagem_edit else '' }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="custo">Custo da Viagem (R$)</label>
+                <input type="number" id="custo" name="custo" step="0.01" min="0" placeholder="Ex: 50.00" value="{{ viagem_edit.custo if viagem_edit and viagem_edit.custo else '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="forma_pagamento">Forma de Pagamento</label>
+                <select id="forma_pagamento" name="forma_pagamento">
+                    <option value="" disabled {% if not viagem_edit or not viagem_edit.forma_pagamento %}selected{% endif %}>Selecione a forma de pagamento</option>
+                    <option value="dinheiro" {% if viagem_edit and viagem_edit.forma_pagamento == 'dinheiro' %}selected{% endif %}>Dinheiro</option>
+                    <option value="cartao_credito" {% if viagem_edit and viagem_edit.forma_pagamento == 'cartao_credito' %}selected{% endif %}>Cartão de Crédito</option>
+                    <option value="cartao_debito" {% if viagem_edit and viagem_edit.forma_pagamento == 'cartao_debito' %}selected{% endif %}>Cartão de Débito</option>
+                    <option value="pix" {% if viagem_edit and viagem_edit.forma_pagamento == 'pix' %}selected{% endif %}>PIX</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="status">Status da Viagem</label>
+                <select id="status" name="status" required>
+                    <option value="pendente" {% if viagem_edit and viagem_edit.status == 'pendente' %}selected{% endif %}>Pendente</option>
+                    <option value="em_andamento" {% if viagem_edit and viagem_edit.status == 'em_andamento' %}selected{% endif %}>Em Andamento</option>
+                    <option value="concluida" {% if viagem_edit and viagem_edit.status == 'concluida' %}selected{% endif %}>Concluída</option>
+                    <option value="cancelada" {% if viagem_edit and viagem_edit.status == 'cancelada' %}selected{% endif %}>Cancelada</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="observacoes">Observações</label>
+                <textarea id="observacoes" name="observacoes" rows="4" placeholder="Adicione observações, se necessário">{{ viagem_edit.observacoes if viagem_edit else '' }}</textarea>
+            </div>
+
+            <div class="buttons">
+                <button type="submit" id="submit-btn" class="submit-btn">Adicionar Viagem (+)</button>
+                <a href="{{ url_for('index') }}"><button type="button" class="back-btn">Voltar</button></a>
+            </div>
         </form>
+
+        <!-- Lista de viagens pendentes -->
+        <div class="accordion">
+            <h2>Viagens Cadastradas</h2>
+            {% for viagem in viagens %}
+                <div class="accordion-item">
+                    <div class="accordion-header" onclick="toggleAccordion({{ viagem.id }})">
+                        Viagem #{{ viagem.id }} - {{ viagem.cliente }} ({{ viagem.status|title }})
+                    </div>
+                    <div id="accordion-content-{{ viagem.id }}" class="accordion-content">
+                        <p><strong>Motorista:</strong> {{ viagem.motorista_nome }}</p>
+                        <p><strong>Veículo:</strong> {{ viagem.veiculo_placa }} - {{ viagem.veiculo_modelo }}</p>
+                        <p><strong>Cliente:</strong> {{ viagem.cliente }}</p>
+                        <p><strong>Endereço de Saída:</strong> {{ viagem.endereco_saida }}</p>
+                        <p><strong>Endereço de Destino:</strong> {{ viagem.endereco_destino }}</p>
+                        <p><strong>Distância:</strong> {{ viagem.distancia_km|round(2) }} km</p>
+                        <p><strong>Data/Hora Início:</strong> {{ viagem.data_inicio[:-3] }}</p>
+                        <p><strong>Horário Estimado de Chegada:</strong> {{ viagem.horario_chegada }}</p>
+                        <p><strong>Duração Estimada:</strong> {{ (viagem.duracao_segundos // 60) if viagem.duracao_segundos else 'Não informado' }} minutos</p>
+                        <p><strong>Custo:</strong> R$ {{ viagem.custo|round(2) if viagem.custo else 'Não informado' }}</p>
+                        <p><strong>Forma de Pagamento:</strong> {{ viagem.forma_pagamento|title if viagem.forma_pagamento else 'Não informado' }}</p>
+                        <p><strong>Status:</strong> {{ viagem.status|title }}</p>
+                        <p><strong>Observações:</strong> {{ viagem.observacoes if viagem.observacoes else 'Nenhuma' }}</p>
+                        <button class="edit-btn" data-viagem='{{ viagem|tojson|safe }}' onclick='preencherFormulario(this)'>Editar</button>
+                        <button class="delete-btn" onclick='confirmarExclusao({{ viagem.id }})'>Excluir</button>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
     </div>
 </body>
 </html>

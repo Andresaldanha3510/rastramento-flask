@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consultar Motoristas</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f0f2f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .motorist-list {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .motorist-item {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+        }
+        .motorist-item:last-child {
+            border-bottom: none;
+        }
+        .motorist-item p {
+            margin: 5px 0;
+        }
+        .motorist-item strong {
+            color: #2c3e50;
+        }
+        .back-btn {
+            padding: 10px 20px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .back-btn:hover {
+            background-color: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Consultar Motoristas</h1>
+        <div class="motorist-list">
+            {% for motorista in motoristas %}
+                <div class="motorist-item">
+                    <p><strong>ID:</strong> {{ motorista.id }}</p>
+                    <p><strong>Nome:</strong> {{ motorista.nome }}</p>
+                    <p><strong>CPF:</strong> {{ motorista.cpf }}</p>
+                </div>
+            {% endfor %}
+        </div>
+        <div style="text-align: center; margin-top: 20px;">
+            <button class="back-btn" onclick="window.location.href='/'">Voltar</button>
+        </div>
+    </div>
+</body>
+</html>

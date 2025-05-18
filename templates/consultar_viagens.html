@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consultar Viagens</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f0f2f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .trip-list {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .trip-item {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+        }
+        .trip-item:last-child {
+            border-bottom: none;
+        }
+        .trip-item p {
+            margin: 5px 0;
+        }
+        .trip-item strong {
+            color: #2c3e50;
+        }
+        .back-btn {
+            padding: 10px 20px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .back-btn:hover {
+            background-color: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Consultar Viagens</h1>
+        <div class="trip-list">
+            {% for viagem in viagens %}
+                <div class="trip-item">
+                    <p><strong>ID:</strong> {{ viagem.id }}</p>
+                    <p><strong>Motorista:</strong> {{ viagem.motorista_nome }}</p>
+                    <p><strong>Veículo:</strong> {{ viagem.veiculo_placa }} - {{ viagem.veiculo_modelo }}</p>
+                    <p><strong>Cliente:</strong> {{ viagem.cliente }}</p>
+                    <p><strong>Origem:</strong> {{ viagem.endereco_saida }}</p>
+                    <p><strong>Destino:</strong> {{ viagem.endereco_destino }}</p>
+                    <p><strong>Data/Hora Início:</strong> {{ viagem.data_inicio }}</p>
+                    <p><strong>Data/Hora Fim:</strong> {{ viagem.data_fim }}</p>
+                    <p><strong>Horário Estimado de Chegada:</strong> {{ viagem.horario_chegada }}</p>
+                    <p><strong>Duração Estimada:</strong> {{ (viagem.duracao_segundos // 60) if viagem.duracao_segundos else 'Não informado' }} minutos</p>
+                    <p><strong>Custo:</strong> R$ {{ viagem.custo|round(2) if viagem.custo else 'Não informado' }}</p>
+                    <p><strong>Forma de Pagamento:</strong> {{ viagem.forma_pagamento|title if viagem.forma_pagamento else 'Não informado' }}</p>
+                    <p><strong>Status:</strong> {{ viagem.status|title }}</p>
+                    <p><strong>Observações:</strong> {{ viagem.observacoes if viagem.observacoes else 'Nenhuma' }}</p>
+                </div>
+            {% endfor %}
+        </div>
+        <div style="text-align: center; margin-top: 20px;">
+            <button class="back-btn" onclick="window.location.href='/'">Voltar</button>
+        </div>
+    </div>
+</body>
+</html>
