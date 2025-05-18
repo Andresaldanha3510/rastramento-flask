@@ -12,6 +12,13 @@
             background-color: #f0f2f5;
             color: #333;
         }
+
+        .car-gif {
+            width: 100%;
+            max-height: 60px;
+            object-fit: contain;
+            margin-bottom: 10px;
+       }
         .container {
             max-width: 1200px;
             margin: 20px auto;
@@ -52,6 +59,7 @@
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             text-align: center;
+            margin-bottom: 30px;
         }
         .dashboard h2 {
             color: #2c3e50;
@@ -59,20 +67,19 @@
             margin-bottom: 20px;
         }
         .trip-card {
-            display: none;
             max-width: 600px;
-            margin: 0 auto;
+            margin: 20px auto;
             padding: 20px;
             border-left: 4px solid #3498db;
             background-color: #ecf0f1;
             border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s ease;
             animation: fadeIn 0.5s ease-in;
         }
-        .trip-card.active {
-            display: block;
-        }
-        .trip-card.updating {
-            opacity: 0.7;
+        .trip-card:hover {
+            transform: scale(1.02);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
         }
         .trip-card p {
             margin: 10px 0;
@@ -81,10 +88,10 @@
         .trip-card strong {
             color: #2c3e50;
         }
-        .last-updated {
-            font-size: 0.9em;
-            color: #7f8c8d;
-            margin-top: 10px;
+        .car-animation {
+            width: 100%;
+            height: 50px;
+            margin-bottom: 10px;
         }
         .messages {
             margin-top: 20px;
@@ -120,62 +127,42 @@
             }
         }
     </style>
-    <script>
-        function loadTrip() {
-            const card = document.querySelector('.trip-card');
-            card.classList.add('updating');
-            fetch('/get_active_trip')
-                .then(response => response.json())
-                .then(data => {
-                    card.classList.remove('updating');
-                    if (data.trip) {
-                        card.innerHTML = `
-                            <p><strong>Motorista:</strong> ${data.trip.motorista_nome}</p>
-                            <p><strong>Veículo:</strong> ${data.trip.veiculo_placa} - ${data.trip.veiculo_modelo}</p>
-                            <p><strong>Origem:</strong> ${data.trip.endereco_saida}</p>
-                            <p><strong>Destino:</strong> ${data.trip.endereco_destino}</p>
-                            <p><strong>Horário Estimado de Chegada:</strong> ${data.trip.horario_chegada}</p>
-                            <p class="last-updated">Última atualização: ${new Date().toLocaleTimeString()}</p>
-                        `;
-                        card.classList.add('active');
-                    } else {
-                        card.innerHTML = '<p>Nenhuma viagem em andamento no momento.</p>';
-                        card.classList.remove('active');
-                    }
-                })
-                .catch(error => {
-                    card.classList.remove('updating');
-                    console.error('Erro ao carregar viagem:', error);
-                    card.innerHTML = '<p>Erro ao carregar dados. Tente novamente mais tarde.</p>';
-                });
-        }
-
-        // Atualizar a cada 10 segundos
-        setInterval(loadTrip, 10000); // 10000 ms = 10 segundos
-        window.onload = loadTrip; // Carrega inicialmente ao abrir a página
-    </script>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>Gerenciamento de Viagens</h1>
         </div>
+
         <div class="nav-buttons">
             <button onclick="window.location.href='/cadastrar_motorista'">Cadastrar Motorista</button>
             <button onclick="window.location.href='/cadastrar_veiculo'">Cadastrar Veículo</button>
             <button onclick="window.location.href='/consultar_viagens'">Consultar Viagens</button>
             <button onclick="window.location.href='/consultar_motoristas'">Consultar Motoristas</button>
-            <button onclick="window.location.href='/iniciar_viagem'">Iniciar Viagem</button>
+            <button onclick="window.location.href='/iniciar_viagem'">Nova Viagem</button>
         </div>
-        <div class="dashboard">
-            <h2>Resumo de Viagem em Andamento</h2>
-            <div class="trip-card">
-                <!-- Dados da viagem em andamento serão carregados aqui via JavaScript -->
+
+        
+
+    <div class="dashboard">
+    <h2>Viagens Pendentes / Em Andamento</h2>
+    {% if viagens_ativas %}
+        {% for viagem in viagens_ativas %}
+            <div class="trip-card" onclick="window.location.href='/editar_viagem/{{ viagem.id }}'">
+                <img src="{{ url_for('static', filename='carrinho.gif') }}" alt="Carrinho" class="car-gif">
+                <p><strong>Motorista:</strong> {{ viagem.motorista.nome }}</p>
+                <p><strong>Cliente:</strong> {{ viagem.cliente }}</p>
+                <p><strong>Data/Hora Início:</strong> {{ viagem.data_inicio.strftime('%d/%m/%Y %H:%M') }}</p>
+                <p><strong>Saída:</strong> {{ viagem.endereco_saida }}</p>
+                <p><strong>Destino:</strong> {{ viagem.endereco_destino }}</p>
             </div>
-            {% if not tem_viagem_em_andamento %}
-                <p>Nenhuma viagem em andamento no momento.</p>
-            {% endif %}
+        {% endfor %}
+    {% else %}
+        <p>Não há viagens pendentes ou em andamento.</p>
+    {% endif %}
         </div>
+
+
         <!-- Exibição de mensagens flash -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -187,5 +174,34 @@
             {% endif %}
         {% endwith %}
     </div>
+
+    <script>
+        function loadTrip() {
+            const card = document.getElementById('active-trip');
+            fetch('/get_active_trip')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.trip) {
+                        card.innerHTML = `
+                            <p><strong>Motorista:</strong> ${data.trip.motorista_nome}</p>
+                            <p><strong>Veículo:</strong> ${data.trip.veiculo_placa} - ${data.trip.veiculo_modelo}</p>
+                            <p><strong>Origem:</strong> ${data.trip.endereco_saida}</p>
+                            <p><strong>Destino:</strong> ${data.trip.endereco_destino}</p>
+                            <p><strong>Horário Estimado de Chegada:</strong> ${data.trip.horario_chegada}</p>
+                            <p class="last-updated">Última atualização: ${new Date().toLocaleTimeString()}</p>
+                        `;
+                    } else {
+                        card.innerHTML = '<p>Nenhuma viagem em andamento no momento.</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar viagem:', error);
+                    card.innerHTML = '<p>Erro ao carregar dados. Tente novamente mais tarde.</p>';
+                });
+        }
+
+        setInterval(loadTrip, 10000);
+        window.onload = loadTrip;
+    </script>
 </body>
 </html>
