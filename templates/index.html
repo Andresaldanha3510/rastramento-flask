@@ -1,184 +1,160 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerenciamento de Viagens</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f0f2f5;
-            color: #333;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 20px;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .header h1 {
-            color: #2c3e50;
-            font-size: 2.5em;
-            margin: 0;
-        }
-
-        .nav-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-
-        .nav-buttons button {
-            padding: 12px 25px;
-            font-size: 1em;
-            border: none;
-            border-radius: 8px;
-            background-color: #3498db;
-            color: white;
-            cursor: pointer;
-            transition: background-color 0.3s, transform 0.2s;
-        }
-
-        .nav-buttons button:hover {
-            background-color: #2980b9;
-            transform: translateY(-2px);
-        }
-
-        .dashboard {
-            background-color: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .dashboard h2 {
-            color: #2c3e50;
-            font-size: 1.8em;
-            margin-bottom: 20px;
-        }
-
-        .trip-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            justify-content: center;
-        }
-
-        .trip-card {
-            background-image: url("{{ url_for('static', filename='carro_novo.png') }}");
-            background-size: cover;
-            background-position: center;
-            color: black;
-            padding: 20px;
-            border-radius: 12px;
-            position: relative;
-            overflow: hidden;
-            max-width: 300px;
-            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
-            text-align: left;
-        }
-
-        .trip-card::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background-color: rgba(255, 255, 255, 0.6); /* mais opaco e claro */
-            z-index: 1;
-            border-radius: 12px;
-        }
-
-        .trip-content {
-            position: relative;
-            z-index: 2;
-            font-size: 0.95em;
-            line-height: 1.4em;
-        }
-
-        .messages {
-            margin-top: 20px;
-        }
-
-        .message {
-            padding: 10px;
-            margin: 5px 0;
-            border-radius: 4px;
-        }
-
-        .message.success { background-color: #d4edda; color: #155724; }
-        .message.error { background-color: #f8d7da; color: #721c24; }
-        .message.warning { background-color: #fff3cd; color: #856404; }
-
-        @media (max-width: 600px) {
-            .nav-buttons {
-                flex-direction: column;
-                align-items: center;
-            }
-            .nav-buttons button {
-                width: 80%;
-            }
-            .trip-container {
-                flex-direction: column;
-                align-items: center;
-            }
-        }
-    </style>
+    <title>Transporte de Cargas - Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=places"></script>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Gerenciamento de Viagens</h1>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('index') }}">Transporte de Cargas</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('cadastrar_motorista') }}"><i class="bi bi-person-plus"></i> Cadastrar Motorista</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('cadastrar_veiculo') }}"><i class="bi bi-truck"></i> Cadastrar Veículo</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('iniciar_viagem') }}"><i class="bi bi-geo-alt"></i> Iniciar Viagem</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('consultar_viagens') }}"><i class="bi bi-list-ul"></i> Consultar Viagens</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('consultar_motoristas') }}"><i class="bi bi-person-lines-fill"></i> Consultar Motoristas</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('consultar_veiculos') }}"><i class="bi bi-truck-flatbed"></i> Consultar Veículos</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('relatorios') }}"><i class="bi bi-bar-chart"></i> Relatórios</a>
+                    </li>
+                </ul>
+            </div>
         </div>
+    </nav>
 
-        <div class="nav-buttons">
-            <button onclick="window.location.href='/cadastrar_motorista'">Cadastrar Motorista</button>
-            <button onclick="window.location.href='/cadastrar_veiculo'">Cadastrar Veículo</button>
-            <button onclick="window.location.href='/consultar_viagens'">Consultar Viagens</button>
-            <button onclick="window.location.href='/consultar_motoristas'">Consultar Motoristas</button>
-            <button onclick="window.location.href='/iniciar_viagem'">Nova Viagem</button>
-        </div>
-
-        <div class="dashboard">
-            <h2>Viagens Pendentes / Em Andamento</h2>
-            {% if viagens_ativas %}
-                <div class="trip-container">
-                    {% for viagem in viagens_ativas %}
-                        <div class="trip-card" onclick="window.location.href='/editar_viagem/{{ viagem.id }}'">
-                            <div class="trip-content">
-                                <p><strong>Motorista:</strong> {{ viagem.motorista.nome }}</p>
-                                <p><strong>Cliente:</strong> {{ viagem.cliente }}</p>
-                                <p><strong>Data/Hora Início:</strong> {{ viagem.data_inicio.strftime('%d/%m/%Y %H:%M') }}</p>
-                                <p><strong>Saída:</strong> {{ viagem.endereco_saida }}</p>
-                                <p><strong>Destino:</strong> {{ viagem.endereco_destino }}</p>
-                            </div>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <p>Não há viagens pendentes ou em andamento.</p>
-            {% endif %}
-        </div>
-
+    <div class="container mt-4">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <div class="messages">
-                    {% for category, message in messages %}
-                        <div class="message {{ category }}">{{ message }}</div>
-                    {% endfor %}
-                </div>
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
             {% endif %}
         {% endwith %}
+
+        <h1 class="mb-4">Dashboard</h1>
+
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Total de Motoristas</h5>
+                        <p class="card-text">{{ motoristas | length }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Total de Veículos</h5>
+                        <p class="card-text">{{ veiculos | length }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Total de Viagens</h5>
+                        <p class="card-text">{{ viagens | length }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h2>Viagens Ativas</h2>
+        {% if viagens_ativas %}
+            <div class="row">
+                {% for viagem in viagens_ativas %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ viagem.cliente }}</h5>
+                                <p class="card-text">
+                                    <strong>Motorista:</strong> {{ viagem.motorista.nome }}<br>
+                                    <strong>Veículo:</strong> {{ viagem.veiculo.placa }} - {{ viagem.veiculo.modelo }}<br>
+                                    <strong>Saída:</strong> {{ viagem.endereco_saida }}<br>
+                                    <strong>Destino:</strong> {{ viagem.endereco_destino }}<br>
+                                    <strong>Início:</strong> {{ viagem.data_inicio.strftime('%d/%m/%Y %H:%M') }}<br>
+                                    <strong>Status:</strong> {{ viagem.status | capitalize }}
+                                </p>
+                                <a href="{{ url_for('finalizar_viagem', viagem_id=viagem.id) }}" class="btn btn-success btn-sm">Finalizar</a>
+                                <a href="{{ url_for('editar_viagem', viagem_id=viagem.id) }}" class="btn btn-primary btn-sm">Editar</a>
+                                <a href="{{ url_for('excluir_viagem', viagem_id=viagem.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('Tem certeza que deseja excluir esta viagem?')">Excluir</a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>Nenhuma viagem ativa no momento.</p>
+        {% endif %}
+
+        <h2>Mapa de Viagens Ativas</h2>
+        <div id="map" style="height: 400px;"></div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function initMap() {
+            var map = new google.maps.Map(document.getElementById('map'), {
+                center: {lat: -23.5505, lng: -46.6333}, // São Paulo
+                zoom: 8
+            });
+
+            {% for viagem in viagens_ativas %}
+                {% if viagem.endereco_saida %}
+                    var geocoder = new google.maps.Geocoder();
+                    geocoder.geocode({'address': '{{ viagem.endereco_saida }}'}, function(results, status) {
+                        if (status === 'OK' && results[0]) {
+                            var marker = new google.maps.Marker({
+                                map: map,
+                                position: results[0].geometry.location,
+                                title: '{{ viagem.cliente }} - Saída'
+                            });
+                        }
+                    });
+                {% endif %}
+                {% if viagem.endereco_destino %}
+                    geocoder.geocode({'address': '{{ viagem.endereco_destino }}'}, function(results, status) {
+                        if (status === 'OK' && results[0]) {
+                            var marker = new google.maps.Marker({
+                                map: map,
+                                position: results[0].geometry.location,
+                                title: '{{ viagem.cliente }} - Destino'
+                            });
+                        }
+                    });
+                {% endif %}
+            {% endfor %}
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initMap();
+        });
+    </script>
 </body>
 </html>

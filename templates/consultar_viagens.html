@@ -4,80 +4,79 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Consultar Viagens</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 20px;
-            background-color: #f0f2f5;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        h1 {
-            text-align: center;
-            color: #2c3e50;
-        }
-        .trip-list {
-            background-color: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        .trip-item {
-            padding: 15px;
-            border-bottom: 1px solid #ddd;
-        }
-        .trip-item:last-child {
-            border-bottom: none;
-        }
-        .trip-item p {
-            margin: 5px 0;
-        }
-        .trip-item strong {
-            color: #2c3e50;
-        }
-        .back-btn {
-            padding: 10px 20px;
-            background-color: #6c757d;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        .back-btn:hover {
-            background-color: #5a6268;
-        }
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <h1>Consultar Viagens</h1>
-        <div class="trip-list">
-            {% for viagem in viagens %}
-                <div class="trip-item">
-                    <p><strong>ID:</strong> {{ viagem.id }}</p>
-                    <p><strong>Motorista:</strong> {{ viagem.motorista_nome }}</p>
-                    <p><strong>Veículo:</strong> {{ viagem.veiculo_placa }} - {{ viagem.veiculo_modelo }}</p>
-                    <p><strong>Cliente:</strong> {{ viagem.cliente }}</p>
-                    <p><strong>Origem:</strong> {{ viagem.endereco_saida }}</p>
-                    <p><strong>Destino:</strong> {{ viagem.endereco_destino }}</p>
-                    <p><strong>Data/Hora Início:</strong> {{ viagem.data_inicio }}</p>
-                    <p><strong>Data/Hora Fim:</strong> {{ viagem.data_fim }}</p>
-                    <p><strong>Horário Estimado de Chegada:</strong> {{ viagem.horario_chegada }}</p>
-                    <p><strong>Duração Estimada:</strong> {{ (viagem.duracao_segundos // 60) if viagem.duracao_segundos else 'Não informado' }} minutos</p>
-                    <p><strong>Custo:</strong> R$ {{ viagem.custo|round(2) if viagem.custo else 'Não informado' }}</p>
-                    <p><strong>Forma de Pagamento:</strong> {{ viagem.forma_pagamento|title if viagem.forma_pagamento else 'Não informado' }}</p>
-                    <p><strong>Status:</strong> {{ viagem.status|title }}</p>
-                    <p><strong>Observações:</strong> {{ viagem.observacoes if viagem.observacoes else 'Nenhuma' }}</p>
+    <div class="container mt-4">
+        <h2>Consultar Viagens</h2>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <form method="GET" class="mb-4">
+            <div class="row">
+                <div class="col-md-3">
+                    <input type="text" class="form-control" name="search" placeholder="Buscar..." value="{{ search_query }}">
                 </div>
-            {% endfor %}
-        </div>
-        <div style="text-align: center; margin-top: 20px;">
-            <button class="back-btn" onclick="window.location.href='/'">Voltar</button>
-        </div>
+                <div class="col-md-3">
+                    <select class="form-control" name="status">
+                        <option value="">Todos os Status</option>
+                        <option value="pendente" {% if status_filter == 'pendente' %}selected{% endif %}>Pendente</option>
+                        <option value="em_andamento" {% if status_filter == 'em_andamento' %}selected{% endif %}>Em Andamento</option>
+                        <option value="concluida" {% if status_filter == 'concluida' %}selected{% endif %}>Concluída</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input type="date" class="form-control" name="data_inicio" value="{{ data_inicio }}">
+                </div>
+                <div class="col-md-2">
+                    <input type="date" class="form-control" name="data_fim" value="{{ data_fim }}">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary">Filtrar</button>
+                </div>
+            </div>
+        </form>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Motorista</th>
+                    <th>Veículo</th>
+                    <th>Cliente</th>
+                    <th>Saída</th>
+                    <th>Destino</th>
+                    <th>Início</th>
+                    <th>Fim</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for viagem in viagens %}
+                    <tr>
+                        <td>{{ viagem.id }}</td>
+                        <td>{{ viagem.motorista_nome }}</td>
+                        <td>{{ viagem.veiculo_placa }} - {{ viagem.veiculo_modelo }}</td>
+                        <td>{{ viagem.cliente }}</td>
+                        <td>{{ viagem.endereco_saida }}</td>
+                        <td>{{ viagem.endereco_destino }}</td>
+                        <td>{{ viagem.data_inicio }}</td>
+                        <td>{{ viagem.data_fim }}</td>
+                        <td>{{ viagem.status | capitalize }}</td>
+                        <td>
+                            <a href="{{ url_for('editar_viagem', viagem_id=viagem.id) }}" class="btn btn-sm btn-outline-primary">Editar</a>
+                            <a href="{{ url_for('finalizar_viagem', viagem_id=viagem.id) }}" class="btn btn-sm btn-outline-success">Finalizar</a>
+                            <a href="{{ url_for('excluir_viagem', viagem_id=viagem.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Tem certeza?')">Excluir</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">Voltar</a>
     </div>
 </body>
 </html>
