@@ -12,13 +12,12 @@
             background-color: #f0f2f5;
             color: #333;
         }
-
         .car-gif {
             width: 100%;
             max-height: 60px;
             object-fit: contain;
             margin-bottom: 10px;
-       }
+        }
         .container {
             max-width: 1200px;
             margin: 20px auto;
@@ -66,32 +65,37 @@
             font-size: 1.8em;
             margin-bottom: 20px;
         }
+        .trip-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
         .trip-card {
-            max-width: 600px;
-            margin: 20px auto;
-            padding: 20px;
+            max-width: 300px; /* Reduzido para ficar mais compacto */
+            margin: 10px 0;
+            padding: 15px;
             border-left: 4px solid #3498db;
             background-color: #ecf0f1;
             border-radius: 8px;
             cursor: pointer;
             transition: transform 0.2s ease;
             animation: fadeIn 0.5s ease-in;
+            box-sizing: border-box; /* Garante que padding não aumente a largura total */
         }
         .trip-card:hover {
             transform: scale(1.02);
             box-shadow: 0 6px 12px rgba(0,0,0,0.15);
         }
         .trip-card p {
-            margin: 10px 0;
-            font-size: 1.1em;
+            margin: 8px 0;
+            font-size: 1em; /* Ajustado para texto menor */
         }
-        .trip-card strong {
-            color: #2c3e50;
-        }
-        .car-animation {
-            width: 100%;
-            height: 50px;
-            margin-bottom: 10px;
+        .trip-card {
+            background-image: url("{{ url_for('static', filename='carro_novo.png') }}");
+            background-size: cover;
+            background-position: center;
+            color: white; /* muda a cor da fonte se o fundo for escuro */
         }
         .messages {
             margin-top: 20px;
@@ -125,6 +129,10 @@
             .nav-buttons button {
                 width: 80%;
             }
+            .trip-container {
+                flex-direction: column;
+                align-items: center;
+            }
         }
     </style>
 </head>
@@ -142,28 +150,26 @@
             <button onclick="window.location.href='/iniciar_viagem'">Nova Viagem</button>
         </div>
 
-        
-
-    <div class="dashboard">
-    <h2>Viagens Pendentes / Em Andamento</h2>
-    {% if viagens_ativas %}
-        {% for viagem in viagens_ativas %}
-            <div class="trip-card" onclick="window.location.href='/editar_viagem/{{ viagem.id }}'">
-                <img src="{{ url_for('static', filename='carrinho.gif') }}" alt="Carrinho" class="car-gif">
-                <p><strong>Motorista:</strong> {{ viagem.motorista.nome }}</p>
-                <p><strong>Cliente:</strong> {{ viagem.cliente }}</p>
-                <p><strong>Data/Hora Início:</strong> {{ viagem.data_inicio.strftime('%d/%m/%Y %H:%M') }}</p>
-                <p><strong>Saída:</strong> {{ viagem.endereco_saida }}</p>
-                <p><strong>Destino:</strong> {{ viagem.endereco_destino }}</p>
-            </div>
-        {% endfor %}
-    {% else %}
-        <p>Não há viagens pendentes ou em andamento.</p>
-    {% endif %}
+        <div class="dashboard">
+            <h2>Viagens Pendentes / Em Andamento</h2>
+            {% if viagens_ativas %}
+                <div class="trip-container">
+                    {% for viagem in viagens_ativas %}
+                        <div class="trip-card" onclick="window.location.href='/editar_viagem/{{ viagem.id }}'">
+                            <div class="trip-card" onclick="window.location.href='/editar_viagem/{{ viagem.id }}'">
+                            <p><strong>Motorista:</strong> {{ viagem.motorista.nome }}</p>
+                            <p><strong>Cliente:</strong> {{ viagem.cliente }}</p>
+                            <p><strong>Data/Hora Início:</strong> {{ viagem.data_inicio.strftime('%d/%m/%Y %H:%M') }}</p>
+                            <p><strong>Saída:</strong> {{ viagem.endereco_saida }}</p>
+                            <p><strong>Destino:</strong> {{ viagem.endereco_destino }}</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>Não há viagens pendentes ou em andamento.</p>
+            {% endif %}
         </div>
 
-
-        <!-- Exibição de mensagens flash -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div class="messages">
