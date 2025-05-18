@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -12,32 +13,31 @@
             background-color: #f0f2f5;
             color: #333;
         }
-        .car-gif {
-            width: 100%;
-            max-height: 60px;
-            object-fit: contain;
-            margin-bottom: 10px;
-        }
+
         .container {
             max-width: 1200px;
             margin: 20px auto;
             padding: 20px;
         }
+
         .header {
             text-align: center;
             margin-bottom: 30px;
         }
+
         .header h1 {
             color: #2c3e50;
             font-size: 2.5em;
             margin: 0;
         }
+
         .nav-buttons {
             display: flex;
             justify-content: center;
             gap: 15px;
             margin-bottom: 30px;
         }
+
         .nav-buttons button {
             padding: 12px 25px;
             font-size: 1em;
@@ -48,10 +48,12 @@
             cursor: pointer;
             transition: background-color 0.3s, transform 0.2s;
         }
+
         .nav-buttons button:hover {
             background-color: #2980b9;
             transform: translateY(-2px);
         }
+
         .dashboard {
             background-color: white;
             padding: 20px;
@@ -60,67 +62,64 @@
             text-align: center;
             margin-bottom: 30px;
         }
+
         .dashboard h2 {
             color: #2c3e50;
             font-size: 1.8em;
             margin-bottom: 20px;
         }
+
         .trip-container {
             display: flex;
             flex-wrap: wrap;
             gap: 20px;
             justify-content: center;
         }
+
         .trip-card {
-            max-width: 300px; /* Reduzido para ficar mais compacto */
-            margin: 10px 0;
-            padding: 15px;
-            border-left: 4px solid #3498db;
-            background-color: #ecf0f1;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-            animation: fadeIn 0.5s ease-in;
-            box-sizing: border-box; /* Garante que padding não aumente a largura total */
-        }
-        .trip-card:hover {
-            transform: scale(1.02);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-        }
-        .trip-card p {
-            margin: 8px 0;
-            font-size: 1em; /* Ajustado para texto menor */
-        }
-        .trip-card {
-            background-image: url("{{ url_for('static', filename='carro_novo.png') }}");
+            background-image: url("{{ url_for('static', filename='aff9c6c4-43fb-4930-9248-cd1e62a5eb6d.png') }}");
             background-size: cover;
             background-position: center;
-            color: white; /* muda a cor da fonte se o fundo for escuro */
+            color: black;
+            padding: 20px;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            max-width: 300px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+            text-align: left;
         }
+
+        .trip-card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-color: rgba(255, 255, 255, 0.6); /* mais opaco e claro */
+            z-index: 1;
+            border-radius: 12px;
+        }
+
+        .trip-content {
+            position: relative;
+            z-index: 2;
+            font-size: 0.95em;
+            line-height: 1.4em;
+        }
+
         .messages {
             margin-top: 20px;
         }
+
         .message {
             padding: 10px;
             margin: 5px 0;
             border-radius: 4px;
         }
-        .message.success {
-            background-color: #d4edda;
-            color: #155724;
-        }
-        .message.error {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-        .message.warning {
-            background-color: #fff3cd;
-            color: #856404;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
+
+        .message.success { background-color: #d4edda; color: #155724; }
+        .message.error { background-color: #f8d7da; color: #721c24; }
+        .message.warning { background-color: #fff3cd; color: #856404; }
+
         @media (max-width: 600px) {
             .nav-buttons {
                 flex-direction: column;
@@ -156,12 +155,13 @@
                 <div class="trip-container">
                     {% for viagem in viagens_ativas %}
                         <div class="trip-card" onclick="window.location.href='/editar_viagem/{{ viagem.id }}'">
-                            <div class="trip-card" onclick="window.location.href='/editar_viagem/{{ viagem.id }}'">
-                            <p><strong>Motorista:</strong> {{ viagem.motorista.nome }}</p>
-                            <p><strong>Cliente:</strong> {{ viagem.cliente }}</p>
-                            <p><strong>Data/Hora Início:</strong> {{ viagem.data_inicio.strftime('%d/%m/%Y %H:%M') }}</p>
-                            <p><strong>Saída:</strong> {{ viagem.endereco_saida }}</p>
-                            <p><strong>Destino:</strong> {{ viagem.endereco_destino }}</p>
+                            <div class="trip-content">
+                                <p><strong>Motorista:</strong> {{ viagem.motorista.nome }}</p>
+                                <p><strong>Cliente:</strong> {{ viagem.cliente }}</p>
+                                <p><strong>Data/Hora Início:</strong> {{ viagem.data_inicio.strftime('%d/%m/%Y %H:%M') }}</p>
+                                <p><strong>Saída:</strong> {{ viagem.endereco_saida }}</p>
+                                <p><strong>Destino:</strong> {{ viagem.endereco_destino }}</p>
+                            </div>
                         </div>
                     {% endfor %}
                 </div>
@@ -180,34 +180,5 @@
             {% endif %}
         {% endwith %}
     </div>
-
-    <script>
-        function loadTrip() {
-            const card = document.getElementById('active-trip');
-            fetch('/get_active_trip')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.trip) {
-                        card.innerHTML = `
-                            <p><strong>Motorista:</strong> ${data.trip.motorista_nome}</p>
-                            <p><strong>Veículo:</strong> ${data.trip.veiculo_placa} - ${data.trip.veiculo_modelo}</p>
-                            <p><strong>Origem:</strong> ${data.trip.endereco_saida}</p>
-                            <p><strong>Destino:</strong> ${data.trip.endereco_destino}</p>
-                            <p><strong>Horário Estimado de Chegada:</strong> ${data.trip.horario_chegada}</p>
-                            <p class="last-updated">Última atualização: ${new Date().toLocaleTimeString()}</p>
-                        `;
-                    } else {
-                        card.innerHTML = '<p>Nenhuma viagem em andamento no momento.</p>';
-                    }
-                })
-                .catch(error => {
-                    console.error('Erro ao carregar viagem:', error);
-                    card.innerHTML = '<p>Erro ao carregar dados. Tente novamente mais tarde.</p>';
-                });
-        }
-
-        setInterval(loadTrip, 10000);
-        window.onload = loadTrip;
-    </script>
 </body>
 </html>
