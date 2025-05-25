@@ -88,6 +88,7 @@ class Viagem(db.Model):
     veiculo_id = db.Column(db.Integer, db.ForeignKey('veiculo.id'), nullable=False)
     cliente = db.Column(db.String(100), nullable=False)
     endereco_saida = db.Column(db.String(200), nullable=False)
+    endereco_destino = db.Column(db.String(200), nullable=False)
     distancia_km = db.Column(db.Float, nullable=True)
     data_inicio = db.Column(db.DateTime, nullable=False)
     data_fim = db.Column(db.DateTime, nullable=True)
