@@ -168,7 +168,7 @@
         <div class="flex items-center space-x-4">
     <img src="{{ url_for('static', filename='trackgo_logo.png') }}" 
          alt="Logo TrackGo" 
-         class="h-16 w-16 rounded shadow-md bg-white p-1">
+         class="h-20 w-20 rounded shadow-md bg-white p-1">
     <div class="text-2xl font-bold text-white">
         Transporte de Cargas
     </div>
@@ -181,18 +181,18 @@
 
     <div class="flex h-screen">
         <!-- Sidebar -->
-        <div id="sidebar" class="w-64 p-6 sidebar fixed h-full z-10">
-            <h1 class="text-2xl font-bold mb-8 text-center text-white">Menu</h1>
-            <ul>
-                <li class="mb-4"><a href="{{ url_for('cadastrar_motorista') }}"><i class="fas fa-user"></i> Cadastrar Motorista</a></li>
-                <li class="mb-4"><a href="{{ url_for('cadastrar_veiculo') }}"><i class="fas fa-truck"></i> Cadastrar Veículo</a></li>
-                <li class="mb-4"><a href="{{ url_for('iniciar_viagem') }}"><i class="fas fa-route"></i> Iniciar Viagem</a></li>
-                <li class="mb-4"><a href="{{ url_for('consultar_viagens') }}"><i class="fas fa-search"></i> Consultar Viagens</a></li>
-                <li class="mb-4"><a href="{{ url_for('consultar_motoristas') }}"><i class="fas fa-users"></i> Consultar Motoristas</a></li>
-                <li class="mb-4"><a href="{{ url_for('consultar_veiculos') }}"><i class="fas fa-truck-loading"></i> Consultar Veículos</a></li>
-                <li class="mb-4"><a href="{{ url_for('relatorios') }}"><i class="fas fa-chart-bar"></i> Relatórios</a></li>
-            </ul>
-        </div>
+<div id="sidebar" class="w-64 p-6 sidebar fixed h-full z-10">
+    <h1 class="text-2xl font-bold mb-8 text-center text-white">Menu</h1>
+    <ul>
+        <li class="mb-4"><a href="{{ url_for('cadastrar_motorista') }}"><img src="/static/icons/motorista.png" alt="Motorista" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;"> Cadastrar Motorista</a></li>
+        <li class="mb-4"><a href="{{ url_for('cadastrar_veiculo') }}"><img src="/static/icons/carro_check.png" alt="Veículo" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;"> Cadastrar Veículo</a></li>
+        <li class="mb-4"><a href="{{ url_for('iniciar_viagem') }}"><img src="/static/icons/aviao.png" alt="Viagem" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;"> Iniciar Viagem</a></li>
+        <li class="mb-4"><a href="{{ url_for('consultar_viagens') }}"><img src="/static/icons/lupa.png" alt="Consultar" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;"> Consultar Viagens</a></li>
+        <li class="mb-4"><a href="{{ url_for('consultar_motoristas') }}"><img src="/static/icons/lupa.png" alt="Consultar" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;"> Consultar Motoristas</a></li>
+        <li class="mb-4"><a href="{{ url_for('consultar_veiculos') }}"><img src="/static/icons/lupa.png" alt="Consultar" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;"> Consultar Veículos</a></li>
+        <li class="mb-4"><a href="{{ url_for('relatorios') }}"><img src="/static/icons/documento_caneta.png" alt="Relatórios" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;"> Relatórios</a></li>
+    </ul>
+</div>
 
         <!-- Main Content -->
         <div class="flex-1 p-8 overflow-auto main-content">
