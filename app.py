@@ -23,7 +23,7 @@ app = Flask(__name__)
 # Configurações do Flask
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///transport.db')  # Banco de dados (SQLite local ou PostgreSQL no Render)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Desativa rastreamento de modificações para economizar recursos
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'sua_chave_secreta_forte')  # Chave secreta para sessões
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'w9z$kL2mNpQvR7tYxJ3hF8gWcPqB5vM2nZ4rT6yU')
 GOOGLE_MAPS_API_KEY = os.getenv('GOOGLE_MAPS_API_KEY', 'AIzaSyBPdSOZF2maHURmdRmVzLgVo5YO2wliylo')  # Chave da API do Google Maps
 
 # Configuração do Cloudflare R2 (usado para upload de anexos)
