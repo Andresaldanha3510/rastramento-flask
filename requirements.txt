@@ -7,3 +7,4 @@ boto3==1.28.57
 psycopg2-binary==2.9.7
 gunicorn==21.2.0
 werkzeug==2.3.7
+openpyxl==3.1.2
