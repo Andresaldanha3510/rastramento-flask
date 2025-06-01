@@ -211,21 +211,21 @@
 
             <h2 class="text-3xl font-bold mb-6 text-gray-800">Dashboard</h2>
 
-            <!-- Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 print-hide">
-                <div class="bg-white p-6 rounded-lg shadow-md card" style="--index: 1">
-                    <h3 class="text-lg font-semibold mb-2 text-gray-700">Total de Motoristas</h3>
-                    <p class="text-2xl font-bold text-gray-900">{{ motoristas | length }}</p>
-                </div>
-                <div class="bg-white p-6 rounded-lg shadow-md card" style="--index: 2">
-                    <h3 class="text-lg font-semibold mb-2 text-gray-700">Total de Veículos</h3>
-                    <p class="text-2xl font-bold text-gray-900">{{ veiculos | length }}</p>
-                </div>
-                <div class="bg-white p-6 rounded-lg shadow-md card" style="--index: 3">
-                    <h3 class="text-lg font-semibold mb-2 text-gray-700">Total de Viagens</h3>
-                    <p class="text-2xl font-bold text-gray-900">{{ viagens | length }}</p>
-                </div>
-            </div>
+        <!-- Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 print-hide">
+        <a href="{{ url_for('consultar_motoristas') }}" class="bg-white p-6 rounded-lg shadow-md card hover:bg-gray-50" style="--index: 1">
+        <h3 class="text-lg font-semibold mb-2 text-gray-700">Total de Motoristas</h3>
+        <p class="text-2xl font-bold text-gray-900">{{ motoristas | length }}</p>
+         </a>
+        <a href="{{ url_for('consultar_veiculos') }}" class="bg-white p-6 rounded-lg shadow-md card hover:bg-gray-50" style="--index: 2">
+        <h3 class="text-lg font-semibold mb-2 text-gray-700">Total de Veículos</h3>
+        <p class="text-2xl font-bold text-gray-900">{{ veiculos | length }}</p>
+        </a>
+        <a href="{{ url_for('consultar_viagens') }}" class="bg-white p-6 rounded-lg shadow-md card hover:bg-gray-50" style="--index: 3">
+        <h3 class="text-lg font-semibold mb-2 text-gray-700">Total de Viagens</h3>
+        <p class="text-2xl font-bold text-gray-900">{{ viagens | length }}</p>
+    </a>
+</div>
 
             <!-- Dashboard with Full Trip Information -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
