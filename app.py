@@ -579,13 +579,6 @@ def criar_admin():
     return "Admin já existe"
 
 
-@app.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    flash('Você foi desconectado.', 'success')
-    return redirect(url_for('index'))
-
 # Rota para consultar motoristas
 @app.route('/consultar_motoristas', methods=['GET'])
 def consultar_motoristas():
@@ -1701,10 +1694,18 @@ def create_admin():
         return 'Usuário admin criado!'
     return 'Usuário já existe'
 
-# ---- Inicialização do Banco de Dados ----
-# Cria as tabelas no banco de dados, se não existirem
-with app.app_context():
-    db.create_all()
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('Você saiu com sucesso.', 'success')
+    return redirect(url_for('login'))
+
+
+
+
 
 # ---- Execução do Aplicativo ----
 if __name__ == '__main__':
