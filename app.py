@@ -128,6 +128,7 @@ class Usuario(db.Model, UserMixin):
     idioma = db.Column(db.String(20), default='Português')
     two_factor_enabled = db.Column(db.Boolean, default=False)
     two_factor_phone = db.Column(db.String(11), nullable=True)
+    is_admin = db.Column(db.Boolean, default=False)  # 👈 ADICIONE ESTA LINHA
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def set_password(self, password):
@@ -655,6 +656,16 @@ def registrar():
             flash(f'Erro ao criar conta: {str(e)}', 'error')
             
     return render_template('registrar.html')
+
+@app.route('/promover_admin')
+def promover_admin():
+    user = Usuario.query.filter_by(email='adminadmin@admin.com').first()
+    if user:
+        user.is_admin = True
+        db.session.commit()
+        return "Admin atualizado!"
+    return "Usuário não encontrado."
+
 
 # Rota para editar motoristas
 @app.route('/editar_motorista/<int:motorista_id>', methods=['GET', 'POST'])
