@@ -183,10 +183,11 @@ class Viagem(db.Model):
 
 from functools import wraps
 
+
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or current_user.email != 'adminadmin@admin.com':
+        if not current_user.is_authenticated or not current_user.is_admin:
             flash('Acesso restrito ao administrador.', 'error')
             return redirect(url_for('index'))
         return f(*args, **kwargs)
