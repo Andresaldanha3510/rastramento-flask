@@ -184,8 +184,8 @@
         /* Cores específicas para cada header de seção */
         .dashboard-section[style*="--index: 1"] .dashboard-section-header { background-color: #eab308; } /* Em Aberto (Pendente) */
         .dashboard-section[style*="--index: 2"] .dashboard-section-header { background-color: #22c55e; } /* Em Andamento */
-        .dashboard-section[style*="--index: 3"] .dashboard-section-header { background-color: #ea0808; } /* Cargas Cancelada */
-        .dashboard-section[style*="--index: 4"] .dashboard-section-header { background-color: #166534; } /* Resolvida */
+        .dashboard-section[style*="--index: 3"] .dashboard-section-header { background-color: #166534; } /* Cargas Concluídas */
+        .dashboard-section[style*="--index: 4"] .dashboard-section-header { background-color: #ef4444; } /* Cancelada */
 
         /* Conteúdo dos cards do dashboard */
         .dashboard-item-content { /* Renomeado de .mt-2.space-y-3 para clareza */
@@ -414,8 +414,8 @@
                 </div>
             </div>
 
-            <div class="dashboard-section" style="--index: 4">
-                <div class="dashboard-section-header">Concluída</div>
+            <div class="dashboard-section" style="--index: 3">
+                <div class="dashboard-section-header">Cargas Concluídas</div>
                  <div class="dashboard-item-content">
                     {% for viagem in viagens if viagem.status == 'concluida' %}
                         <div class="p-4 rounded-lg dashboard-item">
@@ -433,38 +433,35 @@
                             </div>
                         </div>
                     {% else %}
-                        <p class="text-sm text-gray-500 text-center py-4">Nenhuma viagem resolvida.</p>
+                         <p class="text-sm text-gray-500 text-center py-4">Nenhuma carga concluída.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="dashboard-section" style="--index: 4">
+                <div class="dashboard-section-header">Cargas Canceladas</div>
+                 <div class="dashboard-item-content">
+                    {% for viagem in viagens if viagem.status == 'cancelada' %}
+                        <div class="p-4 rounded-lg dashboard-item">
+                            <p class="font-semibold text-gray-800">{{ viagem.cliente }}</p>
+                            <p class="text-sm text-gray-600"><strong>Motorista:</strong> {{ viagem.motorista.nome }}</p>
+                            <p class="text-sm text-gray-600"><strong>Veículo:</strong> {{ viagem.veiculo.placa }} - {{ viagem.veiculo.modelo }}</p>
+                            <p class="text-sm text-gray-600"><strong>Saída:</strong> {{ viagem.endereco_saida }}</p>
+                            <p class="text-sm text-gray-600"><strong>Destino:</strong> {{ viagem.endereco_destino }}</p>
+                            <p class="text-sm text-gray-600"><strong>Início:</strong> {{ viagem.data_inicio.strftime('%d/%m/%Y %H:%M') }}</p>
+                            <p class="text-sm text-gray-600"><strong>Fim:</strong> {{ viagem.data_fim.strftime('%d/%m/%Y %H:%M') if viagem.data_fim else 'N/A' }}</p>
+                            <p class="text-sm text-gray-600"><strong>Status:</strong> <span class="font-medium">{{ viagem.status | capitalize }}</span></p>
+                            <div class="mt-2 flex space-x-2">
+                                <a href="{{ url_for('editar_viagem', viagem_id=viagem.id) }}" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">Editar</a>
+                                <a href="{{ url_for('excluir_viagem', viagem_id=viagem.id) }}" class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700" onclick="return confirm('Tem certeza que deseja excluir esta viagem?')">Excluir</a>
+                            </div>
+                        </div>
+                    {% else %}
+                        <p class="text-sm text-gray-500 text-center py-4">Nenhuma carga cancelada.</p>
                     {% endfor %}
                 </div>
             </div>
         </div>
-
-
-        <div class="dashboard-section" style="--index: 3">
-            <div class="dashboard-section-header">Cargas Canceladas</div>
-             <div class="dashboard-item-content">
-                {% for viagem in viagens if viagem.status == 'cancelada' %}
-                    <div class="p-4 rounded-lg dashboard-item">
-                        <p class="font-semibold text-gray-800">{{ viagem.cliente }}</p>
-                        <p class="text-sm text-gray-600"><strong>Motorista:</strong> {{ viagem.motorista.nome }}</p>
-                        <p class="text-sm text-gray-600"><strong>Veículo:</strong> {{ viagem.veiculo.placa }} - {{ viagem.veiculo.modelo }}</p>
-                        <p class="text-sm text-gray-600"><strong>Saída:</strong> {{ viagem.endereco_saida }}</p>
-                        <p class="text-sm text-gray-600"><strong>Destino:</strong> {{ viagem.endereco_destino }}</p>
-                        <p class="text-sm text-gray-600"><strong>Início:</strong> {{ viagem.data_inicio.strftime('%d/%m/%Y %H:%M') }}</p>
-                        <p class="text-sm text-gray-600"><strong>Fim:</strong> {{ viagem.data_fim.strftime('%d/%m/%Y %H:%M') if viagem.data_fim else 'N/A' }}</p>
-                        <p class="text-sm text-gray-600"><strong>Status:</strong> <span class="font-medium">{{ viagem.status | capitalize }}</span></p>
-                        <div class="mt-2 flex space-x-2">
-                            <a href="{{ url_for('editar_viagem', viagem_id=viagem.id) }}" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">Editar</a>
-                            <a href="{{ url_for('excluir_viagem', viagem_id=viagem.id) }}" class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700" onclick="return confirm('Tem certeza que deseja excluir esta viagem?')">Excluir</a>
-                        </div>
-                    </div>
-                {% else %}
-                     <p class="text-sm text-gray-500 text-center py-4">Nenhuma carga finalizada.</p>
-                {% endfor %}
-            </div>
-        </div>
-
-            
 
         <div class="mt-6 print-hide">
             <button onclick="window.print()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-300">Imprimir Relatório</button>
