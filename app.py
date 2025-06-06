@@ -100,6 +100,7 @@ class Convite(db.Model):
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
     data_expiracao = db.Column(db.DateTime, nullable=False)
     criado_por = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    role = db.Column(db.String(20), nullable=False, default='Motorista')  # Novo c
 
 # Modelo Veiculo: armazena informações dos veículos
 class Veiculo(db.Model):
@@ -128,17 +129,16 @@ class Usuario(db.Model, UserMixin):
     idioma = db.Column(db.String(20), default='Português')
     two_factor_enabled = db.Column(db.Boolean, default=False)
     two_factor_phone = db.Column(db.String(11), nullable=True)
-    is_admin = db.Column(db.Boolean, default=False)  # 👈 ADICIONE ESTA LINHA
+    is_admin = db.Column(db.Boolean, default=False)  # Mantido para compatibilidade
+    role = db.Column(db.String(20), nullable=False, default='Motorista')  # Novo campo: Admin, Master, Motorista
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def set_password(self, password):
-        """Define a senha com hash."""
         self.senha_hash = generate_password_hash(password)
 
     def check_password(self, password):
-        """Verifica a senha."""
         return check_password_hash(self.senha_hash, password)
-
+    
 # Modelo Destino: armazena os destinos de uma viagem
 class Destino(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -243,17 +243,19 @@ def registrar_com_token(token):
         senha = request.form.get('senha')
 
         if email != convite.email:
-            flash('Email diferente do convite.', 'error')
+            flash('E-mail diferente do convite.', 'error')
             return redirect(request.url)
 
         if Usuario.query.filter_by(email=email).first():
-            flash('Email já cadastrado.', 'error')
+            flash('E-mail já cadastrado.', 'error')
             return redirect(request.url)
 
         usuario = Usuario(
             nome=nome,
             sobrenome=sobrenome,
-            email=email
+            email=email,
+            role=convite.role,  # Atribuir o papel do convite
+            is_admin=convite.role == 'Admin'  # Define is_admin como True apenas para Admin
         )
         usuario.set_password(senha)
         db.session.add(usuario)
@@ -263,7 +265,7 @@ def registrar_com_token(token):
         flash('Conta criada com sucesso!', 'success')
         return redirect(url_for('login'))
 
-    return render_template('registrar_token.html', email=convite.email)
+    return render_template('registrar_token.html', email=convite.email, role=convite.role)
 
 
 # Obtém coordenadas de um endereço usando Google Maps Geocoding API
@@ -290,26 +292,33 @@ def get_coordinates(endereco):
 @admin_required
 def enviar_convite():
     email = request.form.get('email')
-    if not email:
-        flash('Email é obrigatório.', 'error')
+    role = request.form.get('role')
+    
+    if not email or not role:
+        flash('E-mail e papel são obrigatórios.', 'error')
+        return redirect(url_for('configuracoes'))
+    
+    if role not in ['Motorista', 'Master']:
+        flash('Papel inválido.', 'error')
         return redirect(url_for('configuracoes'))
 
     token = str(uuid.uuid4())
     data_expiracao = datetime.utcnow() + timedelta(days=3)
 
-    convite = Convite(email=email, token=token, criado_por=current_user.id, data_expiracao=data_expiracao)
+    convite = Convite(email=email, token=token, criado_por=current_user.id, 
+                     data_expiracao=data_expiracao, role=role)
     db.session.add(convite)
     db.session.commit()
 
     link_convite = url_for('registrar_com_token', token=token, _external=True)
     msg = Message(
-        subject='Convite para acessar o sistema',
+        subject=f'Convite para acessar o sistema como {role}',
         recipients=[email],
-        body=f'Você foi convidado a se registrar no sistema. Clique no link abaixo:\n{link_convite}'
+        body=f'Você foi convidado a se registrar no sistema como {role}. Clique no link abaixo:\n{link_convite}'
     )
     try:
         mail.send(msg)
-        flash(f'Convite enviado para {email}!', 'success')
+        flash(f'Convite enviado para {email} como {role}!', 'success')
     except Exception as e:
         flash(f'Erro ao enviar o e-mail: {str(e)}', 'error')
 
@@ -409,39 +418,6 @@ def index():
 from flask import render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 
-# Rota para a página de configurações
-@app.route('/configuracoes', methods=['GET', 'POST'])
-@login_required
-def configuracoes():
-    """Rota para gerenciar configurações do usuário."""
-    if request.method == 'POST':
-        # Atualizar informações gerais
-        nome = request.form.get('nome', '').strip()
-        sobrenome = request.form.get('sobrenome', '').strip()
-        idioma = request.form.get('idioma', '').strip()
-
-        if not nome or not sobrenome:
-            flash('Nome e sobrenome são obrigatórios.', 'error')
-            return redirect(url_for('configuracoes'))
-
-        if idioma not in ['Português', 'Inglês', 'Espanhol']:
-            flash('Idioma inválido.', 'error')
-            return redirect(url_for('configuracoes'))
-
-        current_user.nome = nome
-        current_user.sobrenome = sobrenome
-        current_user.idioma = idioma
-
-        try:
-            db.session.commit()
-            flash('Configurações gerais atualizadas com sucesso!', 'success')
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Erro ao atualizar configurações: {str(e)}', 'error')
-
-        return redirect(url_for('configuracoes'))
-
-    return render_template('configuracoes.html', usuario=current_user)
 
 # Rota para cadastrar motoristas
 @app.route('/cadastrar_motorista', methods=['GET', 'POST'])
@@ -616,10 +592,12 @@ def login():
             
         login_user(usuario)
         flash('Login realizado com sucesso!', 'success')
+        
+        if usuario.role == 'Motorista':
+            return redirect(url_for('motorista_dashboard'))  # Redireciona para a tela específica
         return redirect(url_for('index'))
         
     return render_template('login.html')
-
 
 @app.route('/registrar', methods=['GET', 'POST'])
 def registrar():
@@ -1749,14 +1727,15 @@ def create_admin():
             nome='Admin',
             sobrenome='Admin',
             email='adminadmin@admin.com',
-            telefone='11999999999'
+            telefone='11999999999',
+            role='Admin',
+            is_admin=True
         )
         admin.set_password('admin123')
         db.session.add(admin)
         db.session.commit()
         return 'Usuário admin criado!'
     return 'Usuário já existe'
-
 
 
 @app.route('/logout')
@@ -1766,9 +1745,128 @@ def logout():
     flash('Você saiu com sucesso.', 'success')
     return redirect(url_for('login'))
 
+@app.route('/configuracoes', methods=['GET', 'POST'])
+@login_required
+def configuracoes():
+    """Rota para gerenciar configurações do usuário e listar usuários (para admins)."""
+    if request.method == 'POST':
+        # Atualizar informações gerais do usuário atual
+        nome = request.form.get('nome', '').strip()
+        sobrenome = request.form.get('sobrenome', '').strip()
+        idioma = request.form.get('idioma', '').strip()
 
+        if not nome or not sobrenome:
+            flash('Nome e sobrenome são obrigatórios.', 'error')
+            return redirect(url_for('configuracoes'))
 
+        if idioma not in ['Português', 'Inglês', 'Espanhol']:
+            flash('Idioma inválido.', 'error')
+            return redirect(url_for('configuracoes'))
 
+        current_user.nome = nome
+        current_user.sobrenome = sobrenome
+        current_user.idioma = idioma
+
+        try:
+            db.session.commit()
+            flash('Configurações gerais atualizadas com sucesso!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao atualizar configurações: {str(e)}', 'error')
+
+        return redirect(url_for('configuracoes'))
+
+    # Listar todos os usuários para administradores
+    usuarios = []
+    if current_user.is_admin:
+        usuarios = Usuario.query.all()
+
+    return render_template('configuracoes.html', usuario=current_user, usuarios=usuarios)
+
+@app.route('/editar_usuario/<int:usuario_id>', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def editar_usuario(usuario_id):
+    """Rota para editar um usuário existente."""
+    usuario = Usuario.query.get_or_404(usuario_id)
+
+    if request.method == 'POST':
+        nome = request.form.get('nome', '').strip()
+        sobrenome = request.form.get('sobrenome', '').strip()
+        email = request.form.get('email', '').strip()
+        role = request.form.get('role', '').strip()
+        senha = request.form.get('senha', '').strip()
+
+        if not nome or not sobrenome or not email or not role:
+            flash('Todos os campos obrigatórios devem ser preenchidos.', 'error')
+            return redirect(url_for('editar_usuario', usuario_id=usuario_id))
+
+        if role not in ['Motorista', 'Master', 'Admin']:
+            flash('Papel inválido.', 'error')
+            return redirect(url_for('editar_usuario', usuario_id=usuario_id))
+
+        if email != usuario.email and Usuario.query.filter_by(email=email).first():
+            flash('E-mail já cadastrado.', 'error')
+            return redirect(url_for('editar_usuario', usuario_id=usuario_id))
+
+        usuario.nome = nome
+        usuario.sobrenome = sobrenome
+        usuario.email = email
+        usuario.role = role
+        usuario.is_admin = (role == 'Admin')
+
+        if senha:
+            usuario.set_password(senha)
+
+        try:
+            db.session.commit()
+            flash('Usuário atualizado com sucesso!', 'success')
+            return redirect(url_for('configuracoes'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao atualizar usuário: {str(e)}', 'error')
+            return redirect(url_for('editar_usuario', usuario_id=usuario_id))
+
+    return render_template('editar_usuario.html', usuario=usuario)
+
+@app.route('/excluir_usuario/<int:usuario_id>')
+@login_required
+@admin_required
+def excluir_usuario(usuario_id):
+    """Rota para excluir um usuário."""
+    usuario = Usuario.query.get_or_404(usuario_id)
+    if usuario.id == current_user.id:
+        flash('Você não pode excluir sua própria conta.', 'error')
+        return redirect(url_for('configuracoes'))
+
+    try:
+        db.session.delete(usuario)
+        db.session.commit()
+        flash('Usuário excluído com sucesso!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao excluir usuário: {str(e)}', 'error')
+    return redirect(url_for('configuracoes'))
+
+def master_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or (current_user.role not in ['Admin', 'Master']):
+            flash('Acesso restrito a administradores ou masters.', 'error')
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/motorista_dashboard')
+@login_required
+def motorista_dashboard():
+    if current_user.role != 'Motorista':
+        flash('Acesso restrito a motoristas.', 'error')
+        return redirect(url_for('index'))
+    
+    # Obter viagens associadas ao motorista
+    viagens = Viagem.query.filter_by(motorista_id=current_user.id).all()
+    return render_template('motorista_dashboard.html', viagens=viagens)
 
 # ---- Execução do Aplicativo ----
 if __name__ == '__main__':
