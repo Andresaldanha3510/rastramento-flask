@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Dashboard do Motorista{% endblock %}
+{% block content %}
+<h2 class="text-2xl font-bold mb-6">Dashboard do Motorista</h2>
+
+<h3 class="text-xl font-semibold mb-4">Suas Viagens</h3>
+<table class="w-full border-collapse border border-gray-300">
+    <thead>
+        <tr class="bg-gray-100">
+            <th class="border p-2">ID</th>
+            <th class="border p-2">Cliente</th>
+            <th class="border p-2">Data de Início</th>
+            <th class="border p-2">Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for viagem in viagens %}
+        <tr>
+            <td class="border p-2">{{ viagem.id }}</td>
+            <td class="border p-2">{{ viagem.cliente }}</td>
+            <td class="border p-2">{{ viagem.data_inicio.strftime('%d/%m/%Y %H:%M') }}</td>
+            <td class="border p-2">{{ viagem.status }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<a href="{{ url_for('logout') }}" class="inline-block mt-6 text-white bg-gray-700 hover:bg-gray-800 px-4 py-2 rounded">
+    Sair
+</a>
+{% endblock %}
