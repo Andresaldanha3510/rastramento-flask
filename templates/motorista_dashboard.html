@@ -1,31 +1,156 @@
-{% extends "base.html" %}
-{% block title %}Dashboard do Motorista{% endblock %}
-{% block content %}
-<h2 class="text-2xl font-bold mb-6">Dashboard do Motorista</h2>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard do Motorista</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        .table-header { background-color: #2c3e50; color: white; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-100 to-purple-200 min-h-screen flex items-center justify-center">
+    <div class="container max-w-6xl mx-auto p-6">
+        <h1 class="text-4xl font-bold text-center text-gray-800 mb-8">Dashboard do Motorista</h1>
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6 fade-in">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Status da Localização</h2>
+            <p class="text-lg text-gray-600">Localização: <span id="location-status" class="font-medium">Aguardando localização...</span></p>
+            <p class="text-lg text-gray-600">Endereço Atual: <span id="address-display" class="font-medium">Carregando...</span></p>
+        </div>
+        <div class="bg-white rounded-lg shadow-md p-4 mb-6 fade-in flex justify-between items-center">
+            <div class="flex space-x-4">
+                <select class="border rounded p-2"><option>Status: Todos os Status</option><option>Pendente</option><option>Em Andamento</option></select>
+                <input type="text" placeholder="Buscar: Cliente, motorista, veículo..." class="border rounded p-2">
+                <input type="date" class="border rounded p-2">
+                <input type="date" class="border rounded p-2">
+            </div>
+            <div><button class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Filtrar</button><button class="bg-gray-500 text-white px-4 py-2 rounded ml-2 hover:bg-gray-600">Exportar para Excel</button></div>
+        </div>
+        <div class="bg-white rounded-lg shadow-md p-6 fade-in">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Viagens Pendentes</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="table-header">
+                        <tr><th class="p-3">ID</th><th class="p-3">Motorista</th><th class="p-3">Veículo</th><th class="p-3">Cliente</th><th class="p-3">Saída</th><th class="p-3">Destino</th><th class="p-3">Início</th><th class="p-3">Fim</th><th class="p-3">Status</th><th class="p-3">Custo Total</th><th class="p-3">Despesas</th><th class="p-3">Ações</th></tr>
+                    </thead>
+                    <tbody id="viagens-pendentes"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script>
+        const locationStatusElement = document.getElementById('location-status');
+        const addressDisplayElement = document.getElementById('address-display');
+        const viagensPendentesElement = document.getElementById('viagens-pendentes');
+        const GEOPFIY_API_KEY = '{{ GEOPFIY_API_KEY }}';
 
-<h3 class="text-xl font-semibold mb-4">Suas Viagens</h3>
-<table class="w-full border-collapse border border-gray-300">
-    <thead>
-        <tr class="bg-gray-100">
-            <th class="border p-2">ID</th>
-            <th class="border p-2">Cliente</th>
-            <th class="border p-2">Data de Início</th>
-            <th class="border p-2">Status</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for viagem in viagens %}
-        <tr>
-            <td class="border p-2">{{ viagem.id }}</td>
-            <td class="border p-2">{{ viagem.cliente }}</td>
-            <td class="border p-2">{{ viagem.data_inicio.strftime('%d/%m/%Y %H:%M') }}</td>
-            <td class="border p-2">{{ viagem.status }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+        async function updateLocation() {
+            if (!navigator.geolocation) {
+                locationStatusElement.textContent = 'Geolocalização não suportada pelo navegador.';
+                addressDisplayElement.textContent = 'Não disponível';
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(async position => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                locationStatusElement.textContent = 'Localização obtida com sucesso!';
+                const url = `https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lng}&apiKey=${GEOPFIY_API_KEY}`;
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`Erro na API do Geoapify: ${response.statusText}`);
+                    const data = await response.json();
+                    let address = 'Endereço não encontrado.';
+                    if (data.features && data.features.length > 0) address = data.features[0].properties.formatted;
+                    addressDisplayElement.textContent = address;
+                    try {
+                        const response = await fetch('/api/update_location', {
+                            method: 'POST', headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({latitude: lat, longitude: lng, endereco_atual: address})
+                        });
+                        const data = await response.json();
+                        if (!data.success) console.error('Erro ao enviar localização:', data.message);
+                    } catch (error) { console.error('Erro de rede ao enviar localização:', error); }
+                } catch (error) {
+                    console.error('Erro ao obter endereço com Geoapify:', error);
+                    addressDisplayElement.textContent = 'Erro ao carregar endereço';
+                    addressDisplayElement.classList.add('text-red-500');
+                }
+            }, handleLocationError, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+        }
 
-<a href="{{ url_for('logout') }}" class="inline-block mt-6 text-white bg-gray-700 hover:bg-gray-800 px-4 py-2 rounded">
-    Sair
-</a>
-{% endblock %}
+        function handleLocationError(error) {
+            let errorMessage = 'Erro desconhecido ao obter localização.';
+            switch (error.code) {
+                case error.PERMISSION_DENIED: errorMessage = 'Permissão negada. Por favor, permita o acesso nas configurações.'; break;
+                case error.POSITION_UNAVAILABLE: errorMessage = 'Localização indisponível. Verifique sua conexão.'; break;
+                case error.TIMEOUT: errorMessage = 'A requisição expirou. Tente novamente.'; break;
+                case error.UNKNOWN_ERROR: errorMessage = 'Erro desconhecido. Tente novamente mais tarde.'; break;
+            }
+            locationStatusElement.textContent = errorMessage;
+            addressDisplayElement.textContent = 'Não disponível';
+            locationStatusElement.classList.add('text-red-500');
+            console.error('Erro de Geolocalização:', errorMessage, error);
+        }
+
+        async function loadViagensPendentes() {
+            try {
+                const response = await fetch('/api/viagens_pendentes', { method: 'GET', headers: {'Content-Type': 'application/json'} });
+                const data = await response.json();
+                console.log('Resposta de /api/viagens_pendentes:', data);
+                if (data.success && data.viagens) {
+                    viagensPendentesElement.innerHTML = '';
+                    data.viagens.forEach(viagem => {
+                        const row = document.createElement('tr');
+                        row.className = 'border-b hover:bg-gray-50';
+                        row.innerHTML = `
+                            <td class="p-3">${viagem.id}</td>
+                            <td class="p-3">${viagem.motorista || '-'}</td>
+                            <td class="p-3">${viagem.veiculo || '-'}</td>
+                            <td class="p-3">${viagem.cliente}</td>
+                            <td class="p-3">${viagem.origem}</td>
+                            <td class="p-3">${viagem.destino}</td>
+                            <td class="p-3">${viagem.inicio || '-'}</td>
+                            <td class="p-3">${viagem.fim}</td>
+                            <td class="p-3">${viagem.status}</td>
+                            <td class="p-3">${viagem.custo_total}</td>
+                            <td class="p-3">${viagem.despesas}</td>
+                            <td class="p-3"><button onclick="aceitarViagem(${viagem.id})" class="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 mr-1">Aceitar</button></td>
+                        `;
+                        viagensPendentesElement.appendChild(row);
+                    });
+                } else {
+                    viagensPendentesElement.innerHTML = '<tr><td colspan="12" class="p-3 text-center text-gray-600">Nenhuma viagem pendente encontrada.</td></tr>';
+                }
+            } catch (error) {
+                console.error('Erro ao carregar viagens pendentes:', error);
+                viagensPendentesElement.innerHTML = '<tr><td colspan="12" class="p-3 text-center text-red-500">Erro ao carregar viagens pendentes.</td></tr>';
+            }
+        }
+
+        async function aceitarViagem(viagemId) {
+            try {
+                const response = await fetch('/api/atualizar_status_viagem', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({viagem_id: viagemId, status: 'Em Andamento'})
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert('Viagem aceita com sucesso!');
+                    loadViagensPendentes();
+                } else {
+                    alert('Erro ao aceitar viagem: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Erro ao aceitar viagem:', error);
+                alert('Erro ao aceitar viagem. Tente novamente.');
+            }
+        }
+
+        updateLocation();
+        loadViagensPendentes();
+        setInterval(updateLocation, 1800000);
+    </script>
+</body>
+</html>
