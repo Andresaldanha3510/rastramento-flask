@@ -43,6 +43,8 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///tra
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Desativa rastreamento de modificações para economizar recursos
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'w9z$kL2mNpQvR7tYxJ3hF8gWcPqB5vM2nZ4rT6yU')
 GOOGLE_MAPS_API_KEY = os.getenv('GOOGLE_MAPS_API_KEY', 'AIzaSyBPdSOZF2maHURmdRmVzLgVo5YO2wliylo')  # Chave da API do Google Maps
+GEOPFIY_API_KEY = os.getenv('GEOPFIY_API_KEY', '7cd423ef184f48f0b770682cbebe11d0') # <-- CHAVE DO GEOPFIY AQUI!
+app.config['GEOPFIY_API_KEY'] = GEOPFIY_API_KEY # Isso adiciona a chave ao dicionário de configuração do Flask.
 
 # Configuração do Cloudflare R2 (usado para upload de anexos)
 app.config['CLOUDFLARE_R2_ENDPOINT'] = os.getenv('CLOUDFLARE_R2_ENDPOINT')
@@ -87,6 +89,15 @@ class Motorista(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     anexos = db.Column(db.String(500), nullable=True)  # URLs dos arquivos no Cloudflare R2, separadas por vírgula
     viagens = db.relationship('Viagem', backref='motorista')  # Relacionamento com Viagem
+
+class LocalizacaoMotorista(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    motorista_id = db.Column(db.Integer, db.ForeignKey('motorista.id'), nullable=False)
+    latitude = db.Column(db.Float, nullable=False)
+    longitude = db.Column(db.Float, nullable=False)
+    endereco_atual = db.Column(db.String(255), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
 
 import uuid
 from datetime import datetime, timedelta
@@ -570,34 +581,45 @@ def consultar_motoristas():
     motoristas = query.order_by(Motorista.nome.asc()).all()
     return render_template('consultar_motoristas.html', motoristas=motoristas, search_query=search_query)
 
+# ... (no seu app.py) ...
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         email = request.form.get('email')
         senha = request.form.get('senha')
-        
+
+        print(f"Tentativa de login para email: {email}") # Adicione esta linha
+        print(f"Senha recebida: {senha}") # Adicione esta linha (CUIDADO COM SENHAS EM PROD)
+
         if not email or not senha:
             flash('Preencha todos os campos', 'error')
+            print("Campos de login vazios.") # Adicione esta linha
             return redirect(url_for('login'))
-            
+
         usuario = Usuario.query.filter_by(email=email).first()
-        
+
         if not usuario:
             flash('Usuário não encontrado', 'error')
+            print(f"Usuário {email} não encontrado no banco de dados.") # Adicione esta linha
             return redirect(url_for('login'))
-            
+
         if not usuario.check_password(senha):
             flash('Senha incorreta', 'error')
+            print(f"Senha incorreta para o usuário {email}.") # Adicione esta linha
             return redirect(url_for('login'))
-            
+
         login_user(usuario)
         flash('Login realizado com sucesso!', 'success')
-        
+        print(f"Login bem-sucedido para o usuário {email}.") # Adicione esta linha
+
         if usuario.role == 'Motorista':
-            return redirect(url_for('motorista_dashboard'))  # Redireciona para a tela específica
+            return redirect(url_for('motorista_dashboard'))
         return redirect(url_for('index'))
-        
+
     return render_template('login.html')
+
+# ... (restante do código) ...
 
 @app.route('/registrar', methods=['GET', 'POST'])
 def registrar():
@@ -1394,88 +1416,50 @@ def consultar_despesas(viagem_id):
         return jsonify({'error': str(e)}), 500
 
 # Rota para atualizar o status de uma viagem
-@app.route('/atualizar_status_viagem/<int:viagem_id>', methods=['POST'])
-def atualizar_status_viagem(viagem_id):
+@app.route('/api/atualizar_status_viagem', methods=['POST'])
+@login_required
+def atualizar_status_viagem():
+    if current_user.role != 'Motorista':
+        logger.error(f"Usuário {current_user.email} tentou atualizar status de viagem sem permissão.")
+        return jsonify({'success': False, 'message': 'Acesso negado.'}), 403
+    data = request.get_json()
+    viagem_id = data.get('viagem_id')
+    status = data.get('status')
+    if not viagem_id or not status:
+        logger.error("Campos viagem_id ou status ausentes na requisição.")
+        return jsonify({'success': False, 'message': 'Campos viagem_id e status são obrigatórios.'}), 400
     try:
-        data = request.get_json()
-        novo_status = data.get('status')
-
-        if novo_status not in ['pendente', 'em_andamento', 'concluida', 'cancelada']:
-            return jsonify({'success': False, 'message': 'Status inválido'}), 400
-
-        viagem = Viagem.query.get_or_404(viagem_id)
-        viagem.status = novo_status
-
-        if novo_status == 'concluida' and not viagem.data_fim:
-            viagem.data_fim = datetime.now()
-
+        viagem = Viagem.query.get(viagem_id)
+        if not viagem:
+            logger.error(f"Viagem {viagem_id} não encontrada.")
+            return jsonify({'success': False, 'message': 'Viagem não encontrada.'}), 404
+        if viagem.status != 'Pendente':
+            logger.error(f"Viagem {viagem_id} não está pendente.")
+            return jsonify({'success': False, 'message': 'Apenas viagens pendentes podem ser aceitas.'}), 400
+        viagem.status = status
+        viagem.motorista_id = current_user.id  # Associa a viagem ao motorista logado
         db.session.commit()
-        return jsonify({'success': True})
+        logger.info(f"Viagem {viagem_id} atualizada para status {status} pelo motorista {current_user.id}")
+        return jsonify({'success': True, 'message': 'Status da viagem atualizado com sucesso!'})
     except Exception as e:
         db.session.rollback()
         logger.error(f"Erro ao atualizar status da viagem {viagem_id}: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500
-
+        return jsonify({'success': False, 'message': f'Erro ao atualizar status: {str(e)}'}), 500
+    
 # Rota para consultar viagens
 @app.route('/consultar_viagens')
+@login_required
 def consultar_viagens():
-    """Rota para consultar viagens com filtros."""
-    status_filter = request.args.get('status', '')
-    search_query = request.args.get('search', '')
-    data_inicio = request.args.get('data_inicio', '')
-    data_fim = request.args.get('data_fim', '')
-    query = Viagem.query
-    if status_filter:
-        query = query.filter_by(status=status_filter)
-    if search_query:
-        query = query.join(Motorista).filter(
-            (Viagem.cliente.ilike(f'%{search_query}%')) |
-            (Motorista.nome.ilike(f'%{search_query}%')) |
-            (Viagem.endereco_saida.ilike(f'%{search_query}%')) |
-            (Viagem.endereco_destino.ilike(f'%{search_query}%'))
-        )
-    if data_inicio:
-        try:
-            query = query.filter(Viagem.data_inicio >= datetime.strptime(data_inicio, '%Y-%m-%d'))
-        except ValueError:
-            flash('Data de início inválida.', 'error')
-    if data_fim:
-        try:
-            query = query.filter(Viagem.data_inicio <= datetime.strptime(data_fim, '%Y-%m-%d'))
-        except ValueError:
-            flash('Data de fim inválida.', 'error')
-    viagens = query.order_by(Viagem.data_inicio.desc()).all()
-    viagens_data = []
-    for v in viagens:
-        horario_chegada = (v.data_inicio + timedelta(seconds=v.duracao_segundos)).strftime('%d/%m/%Y %H:%M') if v.duracao_segundos and not v.data_fim else 'Concluída'
-        viagem_dict = {
-            'id': v.id,
-            'motorista_nome': v.motorista.nome,
-            'veiculo_placa': v.veiculo.placa,
-            'veiculo_modelo': v.veiculo.modelo,
-            'cliente': v.cliente,
-            'endereco_saida': v.endereco_saida,
-            'endereco_destino': v.endereco_destino,
-            'data_inicio': v.data_inicio.strftime('%d/%m/%Y %H:%M'),
-            'data_fim': v.data_fim.strftime('%d/%m/%Y %H:%M') if v.data_fim else 'Em andamento',
-            'duracao_segundos': v.duracao_segundos,
-            'custo': v.custo,
-            'forma_pagamento': v.forma_pagamento,
-            'status': v.status,
-            'observacoes': v.observacoes,
-            'horario_chegada': horario_chegada
-        }
-        viagens_data.append(viagem_dict)
-    return render_template(
-        'consultar_viagens.html',
-        viagens=viagens_data,
-        status_filter=status_filter,
-        search_query=search_query,
-        data_inicio=data_inicio,
-        data_fim=data_fim
-    )
+    if current_user.role != 'Motorista':
+        logger.error(f"Usuário {current_user.email} tentou acessar consultar_viagens sem permissão.")
+        return redirect(url_for('login'))
+    viagens = Viagem.query.options(
+        db.joinedload(Viagem.motorista),
+        db.joinedload(Viagem.veiculo)
+    ).all()  # Carrega os relacionamentos motorista e veiculo
+    return render_template('consultar_viagens.html', viagens=viagens)
 
-# Rota para finalizar viagens
+
 @app.route('/finalizar_viagem/<int:viagem_id>', methods=['GET', 'POST'])
 def finalizar_viagem(viagem_id):
     viagem = Viagem.query.get_or_404(viagem_id)
@@ -1863,11 +1847,131 @@ def motorista_dashboard():
     if current_user.role != 'Motorista':
         flash('Acesso restrito a motoristas.', 'error')
         return redirect(url_for('index'))
-    
-    # Obter viagens associadas ao motorista
-    viagens = Viagem.query.filter_by(motorista_id=current_user.id).all()
-    return render_template('motorista_dashboard.html', viagens=viagens)
 
+    # PASSE SOMENTE A CHAVE DO GEOPFIY PARA O TEMPLATE HTML DO DASHBOARD DO MOTORISTA
+    return render_template('motorista_dashboard.html',
+                           GEOPFIY_API_KEY=app.config['GEOPFIY_API_KEY'])
+
+@app.route('/api/update_location', methods=['POST'])
+@login_required
+def update_location():
+    if current_user.role != 'Motorista':
+        return jsonify({'success': False, 'message': 'Acesso negado.'}), 403
+
+    data = request.get_json()
+    latitude = data.get('latitude')
+    longitude = data.get('longitude')
+    endereco_atual = data.get('endereco_atual') # Recebemos o endereço do frontend
+
+    if not all([latitude, longitude]):
+        return jsonify({'success': False, 'message': 'Latitude e longitude são obrigatórias.'}), 400
+
+    try:
+        nova_localizacao = LocalizacaoMotorista(
+            motorista_id=current_user.id,
+            latitude=latitude,
+            longitude=longitude,
+            endereco_atual=endereco_atual
+        )
+        db.session.add(nova_localizacao)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Localização atualizada com sucesso!'})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Erro ao salvar localização: {str(e)}")
+        return jsonify({'success': False, 'message': f'Erro ao salvar localização: {str(e)}'}), 500
+
+# NOVA ROTA: Endpoint para obter as viagens pendentes do motorista logado
+@app.route('/api/get_motorista_pending_trips', methods=['GET'])
+@login_required
+def get_motorista_pending_trips():
+    # A verificação de role 'Motorista' ainda é importante para restringir o acesso à API.
+    if current_user.role != 'Motorista':
+        return jsonify({'success': False, 'message': 'Acesso negado.'}), 403
+
+    # MODIFICADO: Removido o filtro por motorista_id.
+    # Agora, todos os motoristas verão todas as viagens com status 'pendente' ou 'em_andamento'.
+    viagens_pendentes = Viagem.query.filter(
+        Viagem.status.in_(['pendente', 'em_andamento'])
+    ).all()
+
+    trips_data = []
+    for viagem in viagens_pendentes:
+        # Garante que o nome do motorista associado à viagem seja incluído
+        motorista_nome = viagem.motorista.nome if viagem.motorista else "Desconhecido"
+        primeiro_destino = viagem.destinos.order_by(Destino.ordem.asc()).first()
+        trips_data.append({
+            'id': viagem.id,
+            'cliente': viagem.cliente,
+            'data_inicio': viagem.data_inicio.strftime('%d/%m/%Y %H:%M'),
+            'status': viagem.status,
+            'endereco_saida': viagem.endereco_saida,
+            'endereco_destino_principal': primeiro_destino.endereco if primeiro_destino else viagem.endereco_destino,
+            'todos_destinos': [{'endereco': d.endereco, 'ordem': d.ordem} for d in viagem.destinos.order_by(Destino.ordem.asc()).all()],
+            'motorista_nome': motorista_nome # Adicionando o nome do motorista à resposta
+        })
+    return jsonify({'success': True, 'trips': trips_data})
+# NOVA ROTA: Endpoint para obter as coordenadas da rota de uma viagem específica
+@app.route('/api/get_trip_route_coordinates/<int:viagem_id>', methods=['GET'])
+@login_required
+def get_trip_route_coordinates(viagem_id):
+    if current_user.role != 'Motorista':
+        return jsonify({'success': False, 'message': 'Acesso negado.'}), 403
+
+    viagem = Viagem.query.filter_by(id=viagem_id, motorista_id=current_user.id).first()
+    if not viagem:
+        return jsonify({'success': False, 'message': 'Viagem não encontrada ou acesso negado.'}), 404
+
+    # Lista de endereços da viagem, incluindo a saída e todos os destinos
+    enderecos = [viagem.endereco_saida] + [d.endereco for d in viagem.destinos.order_by(Destino.ordem.asc()).all()]
+
+    waypoints = []
+    if len(enderecos) > 2: # Se houver mais de 2 endereços, os intermediários são waypoints
+        for i in range(1, len(enderecos) - 1):
+            lat, lng = get_coordinates(enderecos[i])
+            if lat is not None and lng is not None:
+                waypoints.append({'location': {'lat': lat, 'lng': lng}, 'stopover': True}) # stopover=True para parar no local
+
+    origin_lat, origin_lng = get_coordinates(enderecos[0])
+    destination_lat, destination_lng = get_coordinates(enderecos[-1])
+
+    if None in [origin_lat, origin_lng, destination_lat, destination_lng]:
+        return jsonify({'success': False, 'message': 'Não foi possível obter coordenadas para todos os endereços da rota.'}), 500
+
+    route_data = {
+        'origin': {'lat': origin_lat, 'lng': origin_lng},
+        'destination': {'lat': destination_lat, 'lng': destination_lng},
+        'waypoints': waypoints
+    }
+    return jsonify({'success': True, 'route': route_data})
+
+@app.route('/api/viagens_pendentes', methods=['GET'])
+@login_required
+def get_viagens_pendentes():
+    if current_user.role != 'Motorista':
+        logger.error(f"Usuário {current_user.email} tentou acessar viagens pendentes sem permissão.")
+        return jsonify({'success': False, 'message': 'Acesso negado.'}), 403
+    try:
+        viagens = Viagem.query.filter_by(status='Pendente').all()
+        viagens_data = [
+            {
+                'id': viagem.id,
+                'motorista': viagem.motorista.email if viagem.motorista else None,
+                'veiculo': viagem.veiculo,
+                'cliente': viagem.cliente,
+                'origem': viagem.origem,
+                'destino': viagem.destino,
+                'inicio': viagem.inicio.strftime('%d/%m/%Y %H:%M') if viagem.inicio else None,
+                'fim': viagem.fim.strftime('%d/%m/%Y %H:%M') if viagem.fim else 'Em andamento',
+                'status': viagem.status,
+                'custo_total': f'R$ {float(viagem.custo_total):.2f}',
+                'despesas': viagem.despesas
+            } for viagem in viagens
+        ]
+        return jsonify({'success': True, 'viagens': viagens_data})
+    except Exception as e:
+        logger.error(f"Erro ao listar viagens pendentes: {str(e)}")
+        return jsonify({'success': False, 'message': 'Erro ao listar viagens pendentes.'}), 500
 # ---- Execução do Aplicativo ----
 if __name__ == '__main__':
     with app.app_context():
