@@ -19,6 +19,13 @@
             padding-top: 100px; /* Altura do header */
         }
 
+        .card-text img {
+        margin-top: 5px;
+        }
+        .card-text span {
+        font-weight: bold;
+        }
+
         /* Estilo do cabeçalho (baseado no HTML original do usuário) */
         header.navbar { /* Aplicando diretamente à tag header com classe navbar */
             background: linear-gradient(135deg, #2e7d32, #2e7d32);
@@ -406,7 +413,9 @@
                             <p class="font-semibold text-gray-800">{{ viagem.cliente }}</p>
                             <p class="text-sm text-gray-600"><strong>Motorista:</strong> {{ viagem.motorista_nome }}</p>
                             <p class="text-sm text-gray-600"><strong>Veículo:</strong> {{ viagem.veiculo_placa }} - {{ viagem.veiculo_modelo }}</p>                                              
-                            <p class="text-sm text-gray-600"><strong>Início:</strong> {{ viagem.data_inicio.strftime('%d/%m/%Y %H:%M') }}</p>                           
+                            <p class="text-sm text-gray-600"><strong>Início:</strong> {{ viagem.data_inicio.strftime('%d/%m/%Y %H:%M') }}</p>
+                            <img src="{{ url_for('static', filename='localizacaoanimado.gif') }}" alt="Ícone de Localização" style="width: 24px; height: 24px; vertical-align: middle; margin-right: 5px;">
+                             Endereço Atual: <span id="endereco-atual-{{ viagem.id }}">Carregando...</span>                           
                             <div class="mt-2 flex space-x-2">
                                 <a href="{{ url_for('finalizar_viagem', viagem_id=viagem.id) }}" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">Finalizar</a>
                                 <a href="{{ url_for('editar_viagem', viagem_id=viagem.id) }}" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">Editar</a>
@@ -468,11 +477,11 @@
     </div>
 </div>
 
+<!-- Script para gerenciar a sidebar -->
 <script>
     // Obter referências (usando os IDs e classes do HTML original do usuário)
     const sidebar = document.getElementById('sidebar');
     const menuToggle = document.getElementById('menu-toggle');
-    // const mainContent = document.querySelector('.main-content'); // Não é mais necessário para JS ajustar padding/margin
 
     // Função para alternar a sidebar em telas mobile
     function toggleMobileSidebar() {
@@ -513,5 +522,41 @@
     window.addEventListener('load', handleResize);
     window.addEventListener('resize', handleResize);
 </script>
+
+<!-- Script para atualizar endereço em tempo real -->
+'<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        function atualizarLocalizacao(viagemId) {
+            fetch(`/ultima_localizacao/${viagemId}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const enderecoSpan = document.getElementById(`endereco-atual-${viagemId}`);
+                if (data.success) {
+                    enderecoSpan.textContent = data.endereco;
+                } else {
+                    enderecoSpan.textContent = 'Nenhuma localização disponível';
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao atualizar localização:', error);
+                document.getElementById(`endereco-atual-${viagemId}`).textContent = 'Erro ao carregar localização';
+            });
+        }
+
+        // Atualiza a localização para cada viagem em andamento
+        {% for viagem in viagens if viagem.status == 'em_andamento' %}
+            atualizarLocalizacao({{ viagem.id }});
+            // Atualiza a cada 30 segundos
+            setInterval(() => atualizarLocalizacao({{ viagem.id }}), 30000);
+        {% endfor %}
+    });'
+</script>
+
+
 </body>
 </html>
