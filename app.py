@@ -18,6 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_mail import Mail, Message
+from geopy.geocoders import OpenCage # Mantido se ainda for usado em algum lugar, mas não mais no seeding
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 
 # ---- Configurações Iniciais ----
@@ -2377,6 +2378,17 @@ def get_address_geoapify(lat, lon):
     except Exception as e:
         logger.error(f"Erro inesperado na geocodificação Geoapify: {str(e)}", exc_info=True)
     return "Endereço não encontrado"
+
+# Adicione este bloco de código ao seu app.py
+
+@app.route('/ultima_localizacao/<int:viagem_id>', methods=['GET'])
+def ultima_localizacao(viagem_id):
+    """Retorna a última localização registrada para uma viagem."""
+    localizacao = Localizacao.query.filter_by(viagem_id=viagem_id).order_by(Localizacao.timestamp.desc()).first()
+    if localizacao:
+        return jsonify({'success': True, 'endereco': localizacao.endereco})
+    return jsonify({'success': False, 'message': 'Nenhuma localização encontrada para esta viagem.'})
+
 
 # ---- Execução do Aplicativo ----
 
