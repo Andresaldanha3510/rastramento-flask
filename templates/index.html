@@ -21,8 +21,8 @@
 
         /* Estilo do cabeçalho (baseado no HTML original do usuário) */
         header.navbar { /* Aplicando diretamente à tag header com classe navbar */
-            background-color: green;
-            box-shadow: 0px 3px 10px rgb(10, 73, 10);
+            background: linear-gradient(135deg, #2e7d32, #2e7d32);
+            box-shadow: 0px 3px 6px rgb(10, 73, 10);
             width: 100%;
             position: fixed;
             top: 0;
@@ -84,7 +84,7 @@
 
         /* Estilos da Sidebar (originalmente div#sidebar) */
         div#sidebar { /* Aplicando ao div com ID sidebar */
-            background-color: #1a4d2e;
+            background-color: #2F3640;
             box-shadow: 2px 0px 10px rgba(0, 0, 0, 0.3);
             transition: transform 0.3s ease-in-out;
             border-top-right-radius: 10px;
@@ -101,7 +101,7 @@
         }
 
         div#sidebar h1 { /* Título dentro da sidebar */
-            color: #e0ffe0;
+            color: #ffffff;
             font-size: 1.5rem; /* text-2xl */
             font-weight: bold;
             margin-bottom: 2rem; /* mb-8 */
@@ -126,6 +126,17 @@
         div#sidebar ul li a:hover {
             background-color: #2e8b57;
         }
+        /*Adiciona a animação ao passar o mouse encima */
+        div#sidebar ul li a.active {
+            background-color: #2e8b57;
+            font-weight: 600;
+            box-shadow: inset 3px 0 0 0 #ffffff;
+        }
+        /*Evitar que o link ativo mude de cor ao passar o mouse */
+        div#sidebar ul li a:not(.active):hover {
+            background-color: #2e8b57;
+        }
+
         div#sidebar ul li a i {
             width: 20px; /* Para alinhar o texto mesmo que alguns itens não tenham ícone */
             text-align: center;
@@ -182,10 +193,10 @@
             color: white;
         }
         /* Cores específicas para cada header de seção */
-        .dashboard-section[style*="--index: 1"] .dashboard-section-header { background-color: #ef4444; } /* Em Aberto (Pendente) */
-        .dashboard-section[style*="--index: 2"] .dashboard-section-header { background-color: #22c55e; } /* Em Andamento */
-        .dashboard-section[style*="--index: 3"] .dashboard-section-header { background-color: #eab308; } /* Cargas Finalizadas */
-        .dashboard-section[style*="--index: 4"] .dashboard-section-header { background-color: #166534; } /* Resolvida */
+        .dashboard-section[style*="--index: 1"] .dashboard-section-header { background-color: #eab308; } /* Em Aberto (Pendente) */
+        .dashboard-section[style*="--index: 2"] .dashboard-section-header { background-color: #0f1c66; } /* Em Andamento */
+        .dashboard-section[style*="--index: 3"] .dashboard-section-header { background-color: #166534; } /* Cargas Finalizadas */
+        .dashboard-section[style*="--index: 4"] .dashboard-section-header { background-color: #ef4444; } /* Resolvida */
 
         /* Conteúdo dos cards do dashboard */
         .dashboard-item-content { /* Renomeado de .mt-2.space-y-3 para clareza */
@@ -373,12 +384,9 @@
                 <div class="dashboard-item-content"> {% for viagem in viagens if viagem.status == 'pendente' %}
                         <div class="p-4 rounded-lg dashboard-item">
                             <p class="font-semibold text-gray-800">{{ viagem.cliente }}</p>
-                            <p class="text-sm text-gray-600"><strong>Motorista:</strong> {{ viagem.motorista.nome }}</p>
-                            <p class="text-sm text-gray-600"><strong>Veículo:</strong> {{ viagem.veiculo.placa }} - {{ viagem.veiculo.modelo }}</p>
-                            <p class="text-sm text-gray-600"><strong>Saída:</strong> {{ viagem.endereco_saida }}</p>
-                            <p class="text-sm text-gray-600"><strong>Destino:</strong> {{ viagem.endereco_destino }}</p>
+                            <p class="text-sm text-gray-600"><strong>Motorista:</strong> {{ viagem.motorista_nome }}</p>
+                            <p class="text-sm text-gray-600"><strong>Veículo:</strong> {{ viagem.veiculo_placa }} - {{ viagem.veiculo_modelo }}</p>                           
                             <p class="text-sm text-gray-600"><strong>Início:</strong> {{ viagem.data_inicio.strftime('%d/%m/%Y %H:%M') }}</p>
-                            <p class="text-sm text-gray-600"><strong>Status:</strong> <span class="font-medium">{{ viagem.status | capitalize }}</span></p>
                             <div class="mt-2 flex space-x-2"> <a href="{{ url_for('finalizar_viagem', viagem_id=viagem.id) }}" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">Finalizar</a>
                                 <a href="{{ url_for('editar_viagem', viagem_id=viagem.id) }}" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">Editar</a>
                                 <a href="{{ url_for('excluir_viagem', viagem_id=viagem.id) }}" class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700" onclick="return confirm('Tem certeza que deseja excluir esta viagem?')">Excluir</a>
@@ -396,12 +404,9 @@
                     {% for viagem in viagens if viagem.status == 'em_andamento' %}
                         <div class="p-4 rounded-lg dashboard-item">
                             <p class="font-semibold text-gray-800">{{ viagem.cliente }}</p>
-                            <p class="text-sm text-gray-600"><strong>Motorista:</strong> {{ viagem.motorista.nome }}</p>
-                            <p class="text-sm text-gray-600"><strong>Veículo:</strong> {{ viagem.veiculo.placa }} - {{ viagem.veiculo.modelo }}</p>
-                            <p class="text-sm text-gray-600"><strong>Saída:</strong> {{ viagem.endereco_saida }}</p>
-                            <p class="text-sm text-gray-600"><strong>Destino:</strong> {{ viagem.endereco_destino }}</p>
-                            <p class="text-sm text-gray-600"><strong>Início:</strong> {{ viagem.data_inicio.strftime('%d/%m/%Y %H:%M') }}</p>
-                            <p class="text-sm text-gray-600"><strong>Status:</strong> <span class="font-medium">{{ viagem.status | replace('_', ' ') | capitalize }}</span></p>
+                            <p class="text-sm text-gray-600"><strong>Motorista:</strong> {{ viagem.motorista_nome }}</p>
+                            <p class="text-sm text-gray-600"><strong>Veículo:</strong> {{ viagem.veiculo_placa }} - {{ viagem.veiculo_modelo }}</p>                                              
+                            <p class="text-sm text-gray-600"><strong>Início:</strong> {{ viagem.data_inicio.strftime('%d/%m/%Y %H:%M') }}</p>                           
                             <div class="mt-2 flex space-x-2">
                                 <a href="{{ url_for('finalizar_viagem', viagem_id=viagem.id) }}" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">Finalizar</a>
                                 <a href="{{ url_for('editar_viagem', viagem_id=viagem.id) }}" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">Editar</a>
@@ -420,13 +425,10 @@
                     {% for viagem in viagens if viagem.status == 'finalizada' %}
                         <div class="p-4 rounded-lg dashboard-item">
                             <p class="font-semibold text-gray-800">{{ viagem.cliente }}</p>
-                            <p class="text-sm text-gray-600"><strong>Motorista:</strong> {{ viagem.motorista.nome }}</p>
-                            <p class="text-sm text-gray-600"><strong>Veículo:</strong> {{ viagem.veiculo.placa }} - {{ viagem.veiculo.modelo }}</p>
-                            <p class="text-sm text-gray-600"><strong>Saída:</strong> {{ viagem.endereco_saida }}</p>
-                            <p class="text-sm text-gray-600"><strong>Destino:</strong> {{ viagem.endereco_destino }}</p>
+                            <p class="text-sm text-gray-600"><strong>Motorista:</strong> {{ viagem.motorista_nome }}</p>
+                            <p class="text-sm text-gray-600"><strong>Veículo:</strong> {{ viagem.veiculo_placa }} - {{ viagem.veiculo_modelo }}</p>
                             <p class="text-sm text-gray-600"><strong>Início:</strong> {{ viagem.data_inicio.strftime('%d/%m/%Y %H:%M') }}</p>
                             <p class="text-sm text-gray-600"><strong>Fim:</strong> {{ viagem.data_fim.strftime('%d/%m/%Y %H:%M') if viagem.data_fim else 'N/A' }}</p>
-                            <p class="text-sm text-gray-600"><strong>Status:</strong> <span class="font-medium">{{ viagem.status | capitalize }}</span></p>
                             <div class="mt-2 flex space-x-2">
                                 <a href="{{ url_for('editar_viagem', viagem_id=viagem.id) }}" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">Editar</a>
                                 <a href="{{ url_for('excluir_viagem', viagem_id=viagem.id) }}" class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700" onclick="return confirm('Tem certeza que deseja excluir esta viagem?')">Excluir</a>
@@ -444,13 +446,10 @@
                     {% for viagem in viagens if viagem.status == 'concluida' %}
                         <div class="p-4 rounded-lg dashboard-item">
                             <p class="font-semibold text-gray-800">{{ viagem.cliente }}</p>
-                            <p class="text-sm text-gray-600"><strong>Motorista:</strong> {{ viagem.motorista.nome }}</p>
-                            <p class="text-sm text-gray-600"><strong>Veículo:</strong> {{ viagem.veiculo.placa }} - {{ viagem.veiculo.modelo }}</p>
-                            <p class="text-sm text-gray-600"><strong>Saída:</strong> {{ viagem.endereco_saida }}</p>
-                            <p class="text-sm text-gray-600"><strong>Destino:</strong> {{ viagem.endereco_destino }}</p>
+                            <p class="text-sm text-gray-600"><strong>Motorista:</strong> {{ viagem.motorista_nome }}</p>
+                            <p class="text-sm text-gray-600"><strong>Veículo:</strong> {{ viagem.veiculo_placa }} - {{ viagem.veiculo_modelo }}</p>                            
                             <p class="text-sm text-gray-600"><strong>Início:</strong> {{ viagem.data_inicio.strftime('%d/%m/%Y %H:%M') }}</p>
-                            <p class="text-sm text-gray-600"><strong>Fim:</strong> {{ viagem.data_fim.strftime('%d/%m/%Y %H:%M') if viagem.data_fim else 'N/A' }}</p>
-                            <p class="text-sm text-gray-600"><strong>Status:</strong> <span class="font-medium">{{ viagem.status | capitalize }}</span></p>
+                            <p class="text-sm text-gray-600"><strong>Fim:</strong> {{ viagem.data_fim.strftime('%d/%m/%Y %H:%M') if viagem.data_fim else 'N/A' }}</p>                           
                             <div class="mt-2 flex space-x-2">
                                 <a href="{{ url_for('editar_viagem', viagem_id=viagem.id) }}" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">Editar</a>
                                 <a href="{{ url_for('excluir_viagem', viagem_id=viagem.id) }}" class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700" onclick="return confirm('Tem certeza que deseja excluir esta viagem?')">Excluir</a>
