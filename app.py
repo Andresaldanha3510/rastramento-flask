@@ -2389,7 +2389,7 @@ def ultima_localizacao(viagem_id):
     return jsonify({'success': False, 'message': 'Nenhuma localização encontrada para esta viagem.'})
 
 
-@app.route('/motorista/<int:motorista_id>/perfil')
+@app.route('/motorista/<int:motorista_id>/perfil', endpoint='perfil_motorista')
 @login_required # Garante que apenas usuários logados acessem
 def perfil_motorista(motorista_id):
     # 1. Busca o motorista no banco de dados. Se não encontrar, retorna erro 404.
