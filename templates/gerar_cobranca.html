@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Gerar Nova Cobrança - TrackGo{% endblock %}
+
+{% block styles %}
+<style>
+    /* Estilos específicos para esta página, se necessário. */
+    /* Por exemplo, para customizar a aparência da tabela de viagens. */
+    #listaViagens table thead {
+        background-color: #f9fafb; /* um cinza um pouco mais suave */
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2 class="text-3xl font-bold text-gray-800 mb-2 flex items-center gap-3">
+    <i class="fas fa-plus-circle"></i>
+    <span>Gerar Nova Cobrança</span>
+</h2>
+<p class="text-gray-600 mb-6">Selecione um cliente para carregar as viagens concluídas que ainda não foram faturadas.</p>
+
+<form action="{{ url_for('gerar_cobranca') }}" method="POST">
+    
+    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">1. Dados da Fatura</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="cliente_id" class="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+                <select name="cliente_id" id="cliente_id" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500" required>
+                    <option value="" disabled selected>-- Selecione um Cliente --</option>
+                    {% for cliente in clientes %}
+                    <option value="{{ cliente.id }}">{{ cliente.nome_razao_social }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="data_vencimento" class="block text-sm font-medium text-gray-700 mb-1">Data de Vencimento</label>
+                <input type="date" name="data_vencimento" id="data_vencimento" class="block w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500" required>
+            </div>
+        </div>
+        <div class="mt-6">
+            <label for="observacoes" class="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+            <textarea name="observacoes" id="observacoes" rows="3" class="block w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500" placeholder="Adicione notas ou informações adicionais aqui..."></textarea>
+        </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-lg shadow-md">
+         <div class="flex justify-between items-center mb-4 border-b pb-2">
+             <h3 class="text-xl font-semibold text-gray-700">2. Viagens a Incluir</h3>
+             <h4 class="text-xl font-bold text-blue-600">Total: <span id="valorTotal">R$ 0,00</span></h4>
+         </div>
+        <div id="listaViagens" class="text-center text-gray-500 py-8 rounded-md bg-gray-50">
+            <p>Selecione um cliente para carregar as viagens.</p>
+        </div>
+    </div>
+    
+    <div class="mt-8 flex justify-end gap-4">
+        <a href="{{ url_for('consultar_cobrancas') }}" class="bg-gray-300 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-400 transition duration-300">
+            Cancelar
+        </a>
+        <button type="submit" id="btnGerarCobranca" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition duration-300 flex items-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+            <i class="fas fa-save"></i>
+            Gerar Cobrança
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+    // A lógica da sidebar já é gerenciada pelo base.html, não precisamos dela aqui.
+
+    // Lógica da página para carregar viagens e calcular total
+    document.addEventListener('DOMContentLoaded', function() {
+        const clienteSelect = document.getElementById('cliente_id');
+        if(clienteSelect) {
+            clienteSelect.addEventListener('change', carregarViagens);
+        }
+    });
+
+    function carregarViagens() {
+        const clienteId = this.value;
+        const listaViagensDiv = document.getElementById('listaViagens');
+        const btnGerar = document.getElementById('btnGerarCobranca');
+        
+        listaViagensDiv.innerHTML = `<div class="p-8 flex justify-center items-center"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div><span class="ml-4 text-gray-600">Carregando...</span></div>`;
+        btnGerar.disabled = true;
+        document.getElementById('valorTotal').textContent = 'R$ 0,00';
+
+        if (!clienteId) {
+            listaViagensDiv.innerHTML = '<p class="text-center text-gray-500 py-8">Selecione um cliente para carregar as viagens.</p>';
+            return;
+        }
+
+        fetch(`/api/cliente/${clienteId}/viagens_nao_cobradas`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Falha na resposta da rede.');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.length > 0) {
+                    let tableHtml = `
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full bg-white text-sm">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        <th class="py-2 px-3 text-left w-12"><input type="checkbox" id="checkAll" class="form-checkbox h-5 w-5 text-green-600 rounded focus:ring-green-500"></th>
+                                        <th class="py-2 px-3 text-left text-xs font-semibold text-gray-600 uppercase">Data</th>
+                                        <th class="py-2 px-3 text-left text-xs font-semibold text-gray-600 uppercase">Destino</th>
+                                        <th class="py-2 px-3 text-right text-xs font-semibold text-gray-600 uppercase">Valor</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+                    data.forEach(viagem => {
+                        tableHtml += `
+                            <tr class="border-b hover:bg-gray-50">
+                                <td class="py-2 px-3"><input type="checkbox" name="viagem_ids" value="${viagem.id}" class="form-checkbox h-5 w-5 text-green-600 rounded focus:ring-green-500 viagem-checkbox" data-valor="${viagem.valor}"></td>
+                                <td class="py-2 px-3">${viagem.data_inicio}</td>
+                                <td class="py-2 px-3">${viagem.destino}</td>
+                                <td class="py-2 px-3 text-right font-medium">${viagem.valor_formatado}</td>
+                            </tr>`;
+                    });
+                    tableHtml += '</tbody></table></div>';
+                    listaViagensDiv.innerHTML = tableHtml;
+                    listaViagensDiv.classList.remove('bg-gray-50', 'py-8'); // Remove o estilo de placeholder
+                    addEventListenersParaViagens();
+                } else {
+                    listaViagensDiv.innerHTML = '<p class="text-center text-yellow-800 bg-yellow-100 p-4 rounded-md">Nenhuma viagem pendente de cobrança para este cliente.</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao buscar viagens:', error);
+                listaViagensDiv.innerHTML = '<p class="text-center text-red-800 bg-red-100 p-4 rounded-md">Ocorreu um erro ao carregar as viagens. Tente novamente.</p>';
+            });
+    }
+
+    function addEventListenersParaViagens() {
+        document.querySelectorAll('.viagem-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', calcularTotal);
+        });
+        document.getElementById('checkAll').addEventListener('change', function() {
+            document.querySelectorAll('.viagem-checkbox').forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            calcularTotal();
+        });
+    }
+
+    function calcularTotal() {
+        let total = 0;
+        const btnGerar = document.getElementById('btnGerarCobranca');
+        const checkboxes = document.querySelectorAll('.viagem-checkbox:checked');
+        
+        checkboxes.forEach(checkbox => {
+            total += parseFloat(checkbox.dataset.valor);
+        });
+
+        document.getElementById('valorTotal').textContent = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        btnGerar.disabled = checkboxes.length === 0;
+    }
+</script>
+{% endblock %}

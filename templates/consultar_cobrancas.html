@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}Gestão de Cobranças - TrackGo{% endblock %}
+
+{% block styles %}
+<style>
+    .status-badge {
+        font-size: 0.75rem; /* 12px */
+        font-weight: 600;
+        padding: 0.25rem 0.625rem; /* py-1 px-2.5 */
+        border-radius: 9999px; /* rounded-full */
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h2 class="text-3xl font-bold text-gray-800 flex items-center gap-3">
+        <i class="fas fa-file-invoice-dollar"></i>
+        <span>Gestão de Cobranças</span>
+    </h2>
+    <a href="{{ url_for('gerar_cobranca') }}" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-300 flex items-center gap-2">
+        <i class="fas fa-plus-circle"></i>
+        Gerar Nova Cobrança
+    </a>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    <div class="bg-yellow-400/90 text-white p-6 rounded-lg shadow-lg backdrop-blur-sm">
+        <h3 class="text-lg font-semibold">Total Pendente / Vencido</h3>
+        <p class="text-3xl font-bold mt-2">R$ {{ "%.2f"|format(total_pendente or 0.0) | replace('.', ',') }}</p>
+    </div>
+    <div class="bg-green-500/90 text-white p-6 rounded-lg shadow-lg backdrop-blur-sm">
+        <h3 class="text-lg font-semibold">Total Pago</h3>
+        <p class="text-3xl font-bold mt-2">R$ {{ "%.2f"|format(total_pago or 0.0) | replace('.', ',') }}</p>
+    </div>
+</div>
+
+<div class="bg-white p-4 sm:p-6 rounded-lg shadow-md">
+    <div class="overflow-x-auto">
+        <table class="min-w-full bg-white">
+            <thead class="bg-gray-100">
+                <tr>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">#ID</th>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Cliente</th>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Emissão</th>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Vencimento</th>
+                    <th class="py-3 px-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Valor</th>
+                    <th class="py-3 px-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                    <th class="py-3 px-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Ações</th>
+                </tr>
+            </thead>
+            <tbody class="text-gray-700">
+                {% for cobranca in cobrancas %}
+                <tr class="border-b border-gray-200 hover:bg-gray-50">
+                    <td class="py-3 px-4">{{ cobranca.id }}</td>
+                    <td class="py-3 px-4">{{ cobranca.cliente.nome_razao_social }}</td>
+                    <td class="py-3 px-4">{{ cobranca.data_emissao.strftime('%d/%m/%Y') }}</td>
+                    <td class="py-3 px-4">{{ cobranca.data_vencimento.strftime('%d/%m/%Y') }}</td>
+                    <td class="py-3 px-4 text-right font-semibold">R$ {{ "%.2f"|format(cobranca.valor_total) | replace('.', ',') }}</td>
+                    <td class="py-3 px-4 text-center">
+                        {% if cobranca.status == 'Paga' %}
+                            <span class="status-badge bg-green-200 text-green-800">Paga</span>
+                        {% elif cobranca.status == 'Vencida' %}
+                            <span class="status-badge bg-red-200 text-red-800">Vencida</span>
+                        {% else %}
+                            <span class="status-badge bg-yellow-200 text-yellow-800">Pendente</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-3 px-4 text-center space-x-2 whitespace-nowrap">
+                        <a href="{{ url_for('visualizar_nota_debito', cobranca_id=cobranca.id) }}" class="bg-gray-600 text-white text-sm px-3 py-1 rounded hover:bg-gray-700 transition-colors" title="Ver Nota de Débito">
+                            <i class="fas fa-file-alt"></i> Nota
+                        </a>
+
+                        {% if cobranca.status != 'Paga' %}
+                        <button onclick="abrirModalPagamento({{ cobranca.id }})" class="bg-blue-500 text-white text-sm px-3 py-1 rounded hover:bg-blue-600 transition-colors" title="Marcar como Paga">
+                            <i class="fas fa-check"></i> Pagar
+                        </button>
+                        {% endif %}
+                    </td>
+                    </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center py-6 text-gray-500">Nenhuma cobrança encontrada.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="pagamentoModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+  <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+    <h3 class="text-xl font-bold mb-4">Confirmar Pagamento</h3>
+    <p class="mb-4 text-gray-600">Selecione o meio de pagamento para confirmar o recebimento desta cobrança.</p>
+    <input type="hidden" id="cobrancaIdInput">
+    <div>
+        <label for="meioPagamentoSelect" class="block text-sm font-medium text-gray-700">Meio de Pagamento</label>
+        <select id="meioPagamentoSelect" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm" required>
+            <option value="" disabled selected>Selecione...</option>
+            <option value="Pix">Pix</option>
+            <option value="Boleto Bancário">Boleto Bancário</option>
+            <option value="Transferência Bancária (TED/DOC)">Transferência Bancária</option>
+            <option value="Cartão de Crédito">Cartão de Crédito</option>
+            <option value="Dinheiro">Dinheiro</option>
+            <option value="Outro">Outro</option>
+        </select>
+    </div>
+    <div class="mt-6 flex justify-end gap-3">
+      <button type="button" onclick="fecharModalPagamento()" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors">Cancelar</button>
+      <button type="button" onclick="confirmarPagamento()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">Confirmar</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+    const modal = document.getElementById('pagamentoModal');
+
+    function abrirModalPagamento(cobrancaId) {
+        document.getElementById('cobrancaIdInput').value = cobrancaId;
+        if (modal) modal.classList.remove('hidden');
+    }
+
+    function fecharModalPagamento() {
+        if (modal) modal.classList.add('hidden');
+    }
+
+    if (modal) {
+        modal.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                fecharModalPagamento();
+            }
+        });
+    }
+
+    function confirmarPagamento() {
+        const cobrancaId = document.getElementById('cobrancaIdInput').value;
+        const meioPagamento = document.getElementById('meioPagamentoSelect').value;
+
+        if (!meioPagamento) {
+            alert('Por favor, selecione um meio de pagamento.');
+            return;
+        }
+
+        fetch(`/api/cobranca/${cobrancaId}/marcar_paga`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ meio_pagamento: meioPagamento })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                fecharModalPagamento();
+                location.reload();
+            } else {
+                alert('Erro: ' + (data.message || 'Não foi possível confirmar o pagamento.'));
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao confirmar pagamento:', error);
+            alert('Ocorreu um erro de comunicação com o servidor.');
+        });
+    }
+</script>
+{% endblock %}
