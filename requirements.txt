@@ -10,3 +10,4 @@ werkzeug==2.3.7
 openpyxl==3.1.2
 flask-login==0.6.2
 num2words
+Flask-Mail
