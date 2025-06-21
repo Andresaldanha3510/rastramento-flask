@@ -344,11 +344,6 @@ class Viagem(db.Model):
     cobranca_id = db.Column(db.Integer, db.ForeignKey('cobranca.id'), nullable=True)
     abastecimentos = db.relationship('Abastecimento', backref='viagem', lazy=True)
 
-    # Removido: motorista_formal = db.relationship('Motorista', backref='viagens_por_id', foreign_keys=[motorista_id])
-    # O backref 'motorista_formal' em Motorista já cria viagem.motorista_formal
-    # Removido: usuario = db.relationship('Usuario', backref='viagens') # Não mais necessário se motorista_cpf_cnpj for o vínculo
-
-
 class Localizacao(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     motorista_id = db.Column(db.Integer, db.ForeignKey('motorista.id'), nullable=False)
