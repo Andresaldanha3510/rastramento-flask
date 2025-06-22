@@ -22,6 +22,7 @@ from flask import make_response
 from sqlalchemy import UniqueConstraint
 from num2words import num2words
 from collections import defaultdict
+from flask_socketio import SocketIO, emit, join_room, leave_room
 
 
 # ---- Configurações Iniciais ----
@@ -63,10 +64,10 @@ app.config['CLOUDFLARE_R2_PUBLIC_URL'] = os.getenv('CLOUDFLARE_R2_PUBLIC_URL')
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# ---- Inicialização de Extensões ----
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
-
+socketio = SocketIO(app) 
+    
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -3337,9 +3338,62 @@ def create_owner_command(email, password):
         db.session.rollback()
         print(f"Erro ao criar o usuário Owner: {e}")
 
+@socketio.on('connect')
+def handle_connect():
+    logger.info(f"Cliente conectado: {request.sid}")
 
+@socketio.on('disconnect')
+def handle_disconnect():
+    logger.info(f"Cliente desconectado: {request.sid}")
+
+@socketio.on('join_trip_room')
+def handle_join_trip_room(data):
+    viagem_id = data.get('viagem_id')
+    if viagem_id:
+        room = f'viagem_{viagem_id}'
+        join_room(room)
+        logger.info(f"Cliente {request.sid} entrou na sala da viagem {viagem_id}")
+
+@socketio.on('leave_trip_room')
+def handle_leave_trip_room(data):
+    viagem_id = data.get('viagem_id')
+    if viagem_id:
+        room = f'viagem_{viagem_id}'
+        leave_room(room)
+        logger.info(f"Cliente {request.sid} saiu da sala da viagem {viagem_id}")
+
+@socketio.on('atualizar_localizacao_socket')
+@login_required
+def handle_location_update(data):
+    # VERSÃO ÚNICA E CORRETA DESTA FUNÇÃO
+    logger.info(f"--- PONTO 1: handle_location_update chamada com dados: {data}")
+    lat, lon, viagem_id = data.get('latitude'), data.get('longitude'), data.get('viagem_id')
+
+    if not all([lat, lon, viagem_id]): return
+
+    try:
+        motorista_formal = Motorista.query.filter_by(cpf_cnpj=current_user.cpf_cnpj).first()
+        if not motorista_formal:
+            logger.error(f"--- PONTO 2 FALHA: Motorista com CPF {current_user.cpf_cnpj} não encontrado.")
+            return
+        
+        logger.info(f"--- PONTO 2 SUCESSO: Motorista encontrado: {motorista_formal.nome}")
+
+        endereco = get_address_geoapify(lat, lon)
+        nova_localizacao = Localizacao(motorista_id=motorista_formal.id, viagem_id=viagem_id, latitude=lat, longitude=lon, endereco=endereco)
+        db.session.add(nova_localizacao)
+        db.session.commit()
+        
+        room = f'viagem_{viagem_id}'
+        payload = {'latitude': lat, 'longitude': lon, 'endereco': endereco, 'viagem_id': viagem_id}
+        
+        logger.info(f"--- PONTO 3: Emitindo para a sala '{room}'")
+        socketio.emit('localizacao_atualizada', payload, to=room)
+        logger.info("--- PONTO 4: Emissão concluída.")
+    except Exception as e:
+        logger.error(f"Erro no evento de localização: {e}", exc_info=True)
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         seed_database(force=False)
-    app.run(debug=True)
+    socketio.run(app, debug=True)
