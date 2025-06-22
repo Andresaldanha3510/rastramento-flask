@@ -23,6 +23,8 @@ from sqlalchemy import UniqueConstraint
 from num2words import num2words
 from collections import defaultdict
 from flask_socketio import SocketIO, emit, join_room, leave_room
+import eventlet
+eventlet.monkey_patch(thread=False)
 
 
 # ---- Configurações Iniciais ----
