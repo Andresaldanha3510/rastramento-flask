@@ -1,4 +1,3 @@
-from sqlalchemy.pool import NullPool
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -23,8 +22,6 @@ from flask import make_response
 from sqlalchemy import UniqueConstraint
 from num2words import num2words
 from collections import defaultdict
-from flask_socketio import SocketIO, emit, join_room, leave_room
-
 
 
 # ---- Configurações Iniciais ----
@@ -54,7 +51,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'w9z$kL2mNpQvR7tYxJ3hF8gWcPqB5vM2nZ4rT6yU')
 Maps_API_KEY = os.getenv('Maps_API_KEY', 'AIzaSyBPdSOZF2maHURmdRmVzLgVo5YO2wliylo')
 GEOAPIFY_API_KEY = os.getenv('GEOAPIFY_API_KEY', '7cd423ef184f48f0b770682cbebe11d0') # Usar os.getenv para Geoapify também
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_recycle': 280, 'poolclass': NullPool}
+# app.config['OPENCAGE_API_KEY'] = os.getenv('OPENCAGE_API_KEY') # REMOVIDO: Não mais utilizado
 
 app.config['CLOUDFLARE_R2_ENDPOINT'] = os.getenv('CLOUDFLARE_R2_ENDPOINT')
 app.config['CLOUDFLARE_R2_ACCESS_KEY'] = os.getenv('CLOUDFLARE_R2_ACCESS_KEY')
@@ -66,10 +63,10 @@ app.config['CLOUDFLARE_R2_PUBLIC_URL'] = os.getenv('CLOUDFLARE_R2_PUBLIC_URL')
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# ---- Inicialização de Extensões ----
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
-socketio = SocketIO(app) 
-    
+
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -3158,17 +3155,10 @@ def get_address_geoapify(lat, lon):
 
 @app.route('/ultima_localizacao/<int:viagem_id>', methods=['GET'])
 def ultima_localizacao(viagem_id):
-    """Retorna a última localização registrada para uma viagem, incluindo coordenadas."""
+    """Retorna a última localização registrada para uma viagem."""
     localizacao = Localizacao.query.filter_by(viagem_id=viagem_id).order_by(Localizacao.timestamp.desc()).first()
-    
     if localizacao:
-        return jsonify({
-            'success': True, 
-            'endereco': localizacao.endereco,
-            'latitude': localizacao.latitude,    # <-- LINHA ADICIONADA
-            'longitude': localizacao.longitude   # <-- LINHA ADICIONADA
-        })
-    
+        return jsonify({'success': True, 'endereco': localizacao.endereco})
     return jsonify({'success': False, 'message': 'Nenhuma localização encontrada para esta viagem.'})
 
 
@@ -3347,62 +3337,9 @@ def create_owner_command(email, password):
         db.session.rollback()
         print(f"Erro ao criar o usuário Owner: {e}")
 
-@socketio.on('connect')
-def handle_connect():
-    logger.info(f"Cliente conectado: {request.sid}")
 
-@socketio.on('disconnect')
-def handle_disconnect():
-    logger.info(f"Cliente desconectado: {request.sid}")
-
-@socketio.on('join_trip_room')
-def handle_join_trip_room(data):
-    viagem_id = data.get('viagem_id')
-    if viagem_id:
-        room = f'viagem_{viagem_id}'
-        join_room(room)
-        logger.info(f"Cliente {request.sid} entrou na sala da viagem {viagem_id}")
-
-@socketio.on('leave_trip_room')
-def handle_leave_trip_room(data):
-    viagem_id = data.get('viagem_id')
-    if viagem_id:
-        room = f'viagem_{viagem_id}'
-        leave_room(room)
-        logger.info(f"Cliente {request.sid} saiu da sala da viagem {viagem_id}")
-
-@socketio.on('atualizar_localizacao_socket')
-@login_required
-def handle_location_update(data):
-    # VERSÃO ÚNICA E CORRETA DESTA FUNÇÃO
-    logger.info(f"--- PONTO 1: handle_location_update chamada com dados: {data}")
-    lat, lon, viagem_id = data.get('latitude'), data.get('longitude'), data.get('viagem_id')
-
-    if not all([lat, lon, viagem_id]): return
-
-    try:
-        motorista_formal = Motorista.query.filter_by(cpf_cnpj=current_user.cpf_cnpj).first()
-        if not motorista_formal:
-            logger.error(f"--- PONTO 2 FALHA: Motorista com CPF {current_user.cpf_cnpj} não encontrado.")
-            return
-        
-        logger.info(f"--- PONTO 2 SUCESSO: Motorista encontrado: {motorista_formal.nome}")
-
-        endereco = get_address_geoapify(lat, lon)
-        nova_localizacao = Localizacao(motorista_id=motorista_formal.id, viagem_id=viagem_id, latitude=lat, longitude=lon, endereco=endereco)
-        db.session.add(nova_localizacao)
-        db.session.commit()
-        
-        room = f'viagem_{viagem_id}'
-        payload = {'latitude': lat, 'longitude': lon, 'endereco': endereco, 'viagem_id': viagem_id}
-        
-        logger.info(f"--- PONTO 3: Emitindo para a sala '{room}'")
-        socketio.emit('localizacao_atualizada', payload, to=room)
-        logger.info("--- PONTO 4: Emissão concluída.")
-    except Exception as e:
-        logger.error(f"Erro no evento de localização: {e}", exc_info=True)
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-       
-    socketio.run(app, debug=True)
+        seed_database(force=False)
+    app.run(debug=True)
