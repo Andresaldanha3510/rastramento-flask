@@ -3156,10 +3156,17 @@ def get_address_geoapify(lat, lon):
 
 @app.route('/ultima_localizacao/<int:viagem_id>', methods=['GET'])
 def ultima_localizacao(viagem_id):
-    """Retorna a última localização registrada para uma viagem."""
+    """Retorna a última localização registrada para uma viagem, incluindo coordenadas."""
     localizacao = Localizacao.query.filter_by(viagem_id=viagem_id).order_by(Localizacao.timestamp.desc()).first()
+    
     if localizacao:
-        return jsonify({'success': True, 'endereco': localizacao.endereco})
+        return jsonify({
+            'success': True, 
+            'endereco': localizacao.endereco,
+            'latitude': localizacao.latitude,    # <-- LINHA ADICIONADA
+            'longitude': localizacao.longitude   # <-- LINHA ADICIONADA
+        })
+    
     return jsonify({'success': False, 'message': 'Nenhuma localização encontrada para esta viagem.'})
 
 
