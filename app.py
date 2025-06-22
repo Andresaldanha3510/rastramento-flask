@@ -3402,5 +3402,5 @@ def handle_location_update(data):
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-        seed_database(force=False)
+       
     socketio.run(app, debug=True)
