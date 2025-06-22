@@ -11,3 +11,4 @@ openpyxl==3.1.2
 flask-login==0.6.2
 num2words
 Flask-Mail
+Flask-SocketIO==5.3.6
