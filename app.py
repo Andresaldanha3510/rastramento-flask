@@ -1,3 +1,5 @@
+import eventlet
+eventlet.monkey_patch(thread=False)
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -23,8 +25,7 @@ from sqlalchemy import UniqueConstraint
 from num2words import num2words
 from collections import defaultdict
 from flask_socketio import SocketIO, emit, join_room, leave_room
-import eventlet
-eventlet.monkey_patch(thread=False)
+
 
 
 # ---- Configurações Iniciais ----
