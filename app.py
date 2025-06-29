@@ -2029,19 +2029,26 @@ def editar_viagem(viagem_id):
         viagens_data.append(viagem_dict)
     return render_template('iniciar_viagem.html', motoristas=motoristas, veiculos=veiculos, viagens=viagens_data, viagem_edit=viagem, Maps_API_KEY=Maps_API_KEY)
 
-@app.route('/excluir_viagem/<int:viagem_id>')
+@app.route('/excluir_viagem/<int:viagem_id>', methods=['GET', 'POST'])
+@login_required
+@master_required
 def excluir_viagem(viagem_id):
-    viagem = Viagem.query.get_or_404(viagem_id)
     try:
-        if not viagem.data_fim:
-            viagem.veiculo.disponivel = True
+        viagem = Viagem.query.get_or_404(viagem_id)
+        # Busca o romaneio associado (se existir)
+        romaneio = Romaneio.query.filter_by(viagem_id=viagem_id).first()
+        if romaneio:
+            # Exclui o romaneio (os itens serão excluídos automaticamente devido ao cascade="all, delete-orphan")
+            db.session.delete(romaneio)
+        # Exclui a viagem
         db.session.delete(viagem)
         db.session.commit()
         flash('Viagem excluída com sucesso!', 'success')
     except Exception as e:
-        logger.error(f"Erro ao excluir viagem: {str(e)}")
-        flash(f'Erro ao excluir viagem: {str(e)}', 'error')
-    return redirect(url_for('index'))
+        db.session.rollback()
+        logger.error(f"Erro ao excluir viagem: {e}", exc_info=True)
+        flash(f'Erro ao excluir a viagem: {e}', 'error')
+    return redirect(url_for('consultar_viagens'))
 
 @app.route('/salvar_custo_viagem', methods=['POST'])
 @login_required
